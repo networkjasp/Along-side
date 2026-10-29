@@ -157,7 +157,7 @@ def footer():
       <li><span>Pretoria, South Africa</span></li>
     </ul></div>
   </div>
-  <div class="ft-bot"><p>&#169; {YEAR} Alongside. All rights reserved. &middot; <a href="privacy.html">Privacy Notice</a></p><p>Strategic thinking. Practical delivery.</p></div>
+  <div class="ft-bot"><p><span id="cr" class="cr">&#169;</span> {YEAR} Alongside. All rights reserved. &middot; <a href="privacy.html">Privacy Notice</a></p><p>Strategic thinking. Practical delivery.</p></div>
 </footer>
 
 <a class="wa" href="https://wa.me/27845879933" target="_blank" rel="noopener noreferrer" aria-label="Chat on WhatsApp (opens in a new tab)">

@@ -170,3 +170,25 @@ site that needs no GitHub account:
 - **Library workaround:** `@netlify/identity` 2.0.0's `acceptInvite()` does not set the session cookie,
   so the manager signs in once right after the password is chosen.
 - Decap CMS, the GitHub OAuth setup and `site/admin/config.yml` were removed.
+
+## 11. Website Manager: hidden © entrance and a single login
+
+At the client's request the manager is reached by tapping the footer **©** five times, and uses one
+username/password instead of Netlify Identity invites, with no Netlify setup steps. Unlike the
+original manager (S1), the password is checked **on the server**:
+
+- Only a salted scrypt hash is stored, in function code that browsers never receive. The real
+  password appears nowhere in the repository (tests use their own test password). It can be
+  changed with the `ADMIN_PASSWORD_HASH` environment variable.
+- Sessions use an HMAC-signed, `HttpOnly; Secure; SameSite=Strict` cookie (8 hours). The signing secret
+  is generated randomly and stored in Netlify Blobs.
+- 5 failed sign-ins from one address lock it out for 15 minutes.
+- Same-origin check on every write, including sign-in (CSRF).
+- Netlify Identity and the browser bundle were removed. `admin.js` is a plain script with no build step.
+- Tests: 12 API unit tests, plus a browser run: 4 taps did nothing and the 5th opened the manager,
+  the wrong password (wrong case) was rejected, the right one signed in, the cookie was HttpOnly,
+  Secure and SameSite=Strict, a project and founder photo uploaded and showed on the public pages,
+  the session survived a reload, and after sign-out the API returned 401.
+
+**Note:** the tap-the-© entrance is only a convenience. Security comes from the server-side
+password check, because `/admin/` itself can be found by anyone.

@@ -14,7 +14,6 @@ export const CONTENT_KEY = 'content.json';
 export const MAX_UPLOAD_BYTES = 5 * 1024 * 1024; // the browser resizes first, so real uploads are ~0.3–1.5 MB
 export const MAX_ITEMS = 100;
 export const ORPHAN_GRACE_MS = 6 * 60 * 60 * 1000; // never delete an upload younger than 6h (it may be mid-edit)
-export const EDITOR_ROLES = ['admin', 'editor'];
 
 const MEDIA_KEY_RE = /^(\d{13})-([a-f0-9-]{36})\.(jpg|png|webp)$/;
 const MEDIA_PATH_RE = /^\/media\/(\d{13}-[a-f0-9-]{36}\.(?:jpg|png|webp))$/;
@@ -173,26 +172,38 @@ export async function handleMedia(req, deps) {
   });
 }
 
+/** CSRF protection: writes must come from this site's own pages. */
+export function verifySameOrigin(req) {
+  const origin = req.headers.get('origin');
+  if (!origin || origin !== new URL(req.url).origin) throw new HttpError(403, 'Request blocked (wrong origin).');
+}
+
 /**
- * deps: { contentStore, mediaStore, defaults, getUser(), verifyOrigin(req) }
+ * deps: { contentStore, mediaStore, defaults, auth (see auth.mjs), ip }
  */
 export async function handleAdmin(req, deps) {
   try {
     const route = new URL(req.url).pathname.replace(/^\/api\/admin\/?/, '');
     const method = req.method.toUpperCase();
-    if (method !== 'GET') deps.verifyOrigin(req); // CSRF: only same-origin writes
+    const noStore = { 'Cache-Control': 'no-store' };
+    if (method !== 'GET') verifySameOrigin(req);
 
-    const user = await deps.getUser();
-    if (!user) throw new HttpError(401, 'Please sign in.');
-    const roles = user.roles || user.appMetadata?.roles || [];
-    if (!roles.some((r) => EDITOR_ROLES.includes(r))) {
-      throw new HttpError(403, 'Your account is not yet allowed to edit. Ask the site owner to give it the "admin" role in Netlify Identity.');
+    if (route === 'login' && method === 'POST') {
+      let body = {};
+      try { body = await req.json(); } catch { /* empty */ }
+      const r = await deps.auth.login(body, deps.ip);
+      if (!r.ok) return json({ error: r.error }, r.status, noStore);
+      return json({ ok: true, user: deps.auth.username }, 200, { ...noStore, 'Set-Cookie': r.cookie });
+    }
+    if (route === 'logout' && method === 'POST') {
+      return json({ ok: true }, 200, { ...noStore, 'Set-Cookie': deps.auth.logoutCookie() });
     }
 
-    const noStore = { 'Cache-Control': 'no-store' };
+    const user = await deps.auth.getUser(req);
+    if (!user) throw new HttpError(401, 'Please sign in.');
 
     if (route === 'content' && method === 'GET') {
-      return json({ ...(await readContent(deps.contentStore, deps.defaults)), user: { email: user.email } }, 200, noStore);
+      return json({ ...(await readContent(deps.contentStore, deps.defaults)), user: { name: user.email } }, 200, noStore);
     }
 
     if (route === 'upload' && method === 'POST') {
@@ -214,7 +225,6 @@ export async function handleAdmin(req, deps) {
 
     throw new HttpError(404, 'Unknown action.');
   } catch (e) {
-    if (e && e.name === 'AuthError' && e.status === 403) return json({ error: 'Request blocked (wrong origin).' }, 403);
     return errorResponse(e);
   }
 }

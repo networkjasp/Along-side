@@ -95,11 +95,15 @@
     });
   }
 
-  /* ---------- Website Manager: invite / password-reset links ---------- */
-  /* Netlify Identity emails link to the site root; send them to the manager. */
-  if (/(invite|recovery|confirmation|email_change)_token=/.test(location.hash) && !/\/admin\/?/.test(location.pathname)) {
-    location.replace('/admin/' + location.hash);
-    return;
+  /* ---------- Website Manager: tap the © in the footer 5 times ---------- */
+  var cr = $('#cr'), taps = 0, tapTimer;
+  if (cr) {
+    cr.addEventListener('click', function () {
+      taps++;
+      clearTimeout(tapTimer);
+      tapTimer = setTimeout(function () { taps = 0; }, 2500); // taps must be within 2.5s of each other
+      if (taps >= 5) { taps = 0; location.href = '/admin/'; }
+    });
   }
 
   /* ---------- Live portfolio + founder photo (from the Website Manager) ---------- */

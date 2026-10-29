@@ -62,55 +62,43 @@ All tokens are at the top of `site/assets/css/main.css`.
 - Portfolio projects and the founder photo: use the Website Manager (below).
 - Run the checks locally: `npx html-validate "site/*.html"` (same check GitHub runs on every push).
 
-## Website Manager (`/admin`)
+## Website Manager (hidden portal)
 
-A sign-in page built into the site at **https://alongside.co.za/admin/** for:
+**To open it:** tap the **©** in the footer of any page **5 times** (quickly), then sign in with
+the username and password you were given. You can also go straight to `/admin/`.
 
-- **Portfolio:** add projects (title, category, image, description, optional link), edit,
-  reorder (↑ ↓), hide as a draft, choose up to four for the Home page, or remove.
+In the manager:
+
+- **Portfolio:** add a project (title, category, image, description, optional link), edit,
+  reorder (↑ ↓), hide as a draft, tick up to four for the Home page, or remove.
 - **Founder photo:** upload, replace or remove the photo on the About page.
 
-Changes are **live immediately** with no rebuild and no GitHub account needed. Sign-in is email + password.
+Changes are live straight away. There's nothing to set up in Netlify: it works as soon as the site is deployed.
 
-**How it works**
+**How it stays secure**
 
-| Piece | What it does |
-|---|---|
-| `site/admin/` | The manager screen (`admin.js` is built from `tools/admin/admin.src.js`) |
-| Netlify Identity | Email/password accounts, invite-only, with password-reset emails |
-| `netlify/functions/admin.mjs` | Checks the login **and** the `admin` role, then saves |
-| Netlify Blobs | Stores the portfolio list (`site-content`) and uploaded images (`site-media`) |
-| `/api/content`, `/media/…` | Public read-only endpoints the pages use to show the latest content |
+- The password is **checked on the server**, never in the page. Only a scrambled (salted scrypt)
+  version is kept, in server code (`netlify/lib/auth.mjs`) that visitors can't see.
+- After signing in, the browser gets a signed, `HttpOnly` cookie that expires after 8 hours.
+- 5 wrong passwords from one address lock it out for 15 minutes.
+- Every save re-checks the session and only accepts requests from the site itself.
+- Uploads must be real JPG/PNG/WebP images (max 5 MB, resized to 2000px in the browser, which removes GPS data).
+- Keep this GitHub repository **private**.
 
-The pages still contain a copy of the portfolio from `content/*.json` (built in), so they work
-even if the API is unreachable. Uploaded photos are resized in the browser to a maximum of 2000px,
-which also strips GPS/location data, and checked on the server (real JPG/PNG/WebP only, 5 MB max).
-Images no longer used are cleaned up automatically after 6 hours.
+**Changing the username or password** (no code change needed)
 
-### One-time setup (about 5 minutes, in Netlify)
+1. On your computer, in this folder: `npm run hash-password -- "your new password"`, then copy the output.
+2. Netlify → Project configuration → Environment variables → add `ADMIN_PASSWORD_HASH` = (paste),
+   and optionally `ADMIN_USERNAME`.
+3. Redeploy. The new details work immediately, and the old password stops working.
 
-1. **Turn on Identity:** Project configuration → Identity → **Enable Identity**.
-2. **Make it invite-only:** Identity → Registration → **Invite only**. Important: this stops strangers creating accounts.
-3. **Invite editors:** Identity → **Invite users** → enter `stephne@alongside.co.za`. She gets an
-   email, clicks the link, and chooses a password (at least 10 characters).
-4. **Give the role:** Identity → click the user → **Edit settings** → Roles: type `admin` → Save.
-   Without this role an account can sign in but cannot change anything.
-5. Optional: Identity → Emails, to customise the invite / reset email text.
-
-To remove someone's access: Identity → user → **Delete user** (or remove the `admin` role).
-
-### Day-to-day use
-
-Go to `/admin/` → sign in → **Portfolio** or **Founder photo** → make the change → **Save**.
-"Forgot your password?" on the sign-in screen sends a reset link.
-
-### Developer notes
+**Under the hood:** `site/admin/` (manager screen), `netlify/functions/` (API),
+Netlify Blobs (stores the portfolio list and uploaded images), `/api/content` and `/media/…`
+(read-only, used by the public pages). The pages also contain a built-in copy of the portfolio
+from `content/*.json`, so they still show work if the API is unreachable.
 
 ```bash
-npm install
-npm test           # API unit tests (auth, roles, origin check, upload checks, validation)
-npm run build      # pages + admin bundle (Netlify runs this)
-netlify dev        # full local run with Functions + Blobs (Netlify CLI; Identity needs a linked site)
+npm install && npm test     # 12 API tests: login, lockout, sessions, CSRF, uploads, validation
 ```
 
 ## Security notes
@@ -123,6 +111,6 @@ netlify dev        # full local run with Functions + Blobs (Netlify CLI; Identit
   anywhere it was reused.
 
 See `docs/AUDIT.md` for the full findings and the items still to confirm before launch.
-- Website Manager security: invite-only accounts, `admin` role checked on every save, same-origin
-  check on every write (CSRF), all text escaped, links must be `https://`, uploads checked by file
-  signature, and a strict CSP on `/admin` (no `unsafe-eval`, no third-party scripts).
+- Website Manager security: server-side password check (hashed), signed HttpOnly session cookie,
+  login lockout, same-origin check on every write (CSRF), all text escaped, `https://` links only,
+  uploads checked by file signature, and a strict CSP on `/admin` (no third-party scripts).

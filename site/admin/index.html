@@ -29,31 +29,12 @@
     <form class="card" id="login-form" novalidate>
       <h1 id="auth-h">Sign in</h1>
       <p class="muted">Manage portfolio projects and the founder photo.</p>
-      <label for="login-email">Email</label>
-      <input id="login-email" name="email" type="email" autocomplete="username" required/>
+      <label for="login-user">Username</label>
+      <input id="login-user" name="username" type="text" autocomplete="username" autocapitalize="off" spellcheck="false" required/>
       <label for="login-password">Password</label>
       <input id="login-password" name="password" type="password" autocomplete="current-password" required/>
       <button type="submit" class="btn">Sign in</button>
-      <button type="button" class="link-btn" id="show-forgot">Forgot your password?</button>
-    </form>
-
-    <form class="card" id="forgot-form" hidden novalidate>
-      <h1>Reset password</h1>
-      <p class="muted">Enter your email and we'll send you a link to choose a new password.</p>
-      <label for="forgot-email">Email</label>
-      <input id="forgot-email" name="email" type="email" autocomplete="username" required/>
-      <button type="submit" class="btn">Send reset link</button>
-      <button type="button" class="link-btn" id="back-login">Back to sign in</button>
-    </form>
-
-    <form class="card" id="password-form" hidden novalidate>
-      <h1 id="password-h">Choose a password</h1>
-      <p class="muted" id="password-intro">Use at least 10 characters.</p>
-      <label for="new-password">New password</label>
-      <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="10" required/>
-      <label for="new-password2">Repeat password</label>
-      <input id="new-password2" name="password2" type="password" autocomplete="new-password" minlength="10" required/>
-      <button type="submit" class="btn">Save password</button>
+      <p class="form-error" id="login-error" role="alert"></p>
     </form>
   </section>
 

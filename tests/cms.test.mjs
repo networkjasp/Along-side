@@ -2,6 +2,11 @@
 import { test } from 'node:test';
 import assert from 'node:assert/strict';
 import { handleAdmin, handlePublicContent, handleMedia, CONTENT_KEY } from '../netlify/lib/cms.mjs';
+import { createAuth as realCreateAuth, hashPassword } from '../netlify/lib/auth.mjs';
+
+// Tests use their own password so the real one never appears in the repository.
+const TEST_ENV = { ADMIN_USERNAME: 'Jadian', ADMIN_PASSWORD_HASH: hashPassword('Test-Pass#123') };
+const createAuth = (o) => realCreateAuth({ env: TEST_ENV, ...o });
 
 function memStore() {
   const m = new Map();
@@ -19,9 +24,10 @@ const defaults = {
   portfolio: [{ title: 'Wix item', category: 'campaigns', image: 'https://static.wixstatic.com/media/x.jpg', alt: 'x', link: '', show_on_home: true }],
   founder: { name: 'Stephné du Toit-Smit', photo: '', alt: 'Stephné' },
 };
-const admin = { email: 'stephne@alongside.co.za', roles: ['admin'] };
-const deps = (over = {}) => ({ contentStore: memStore(), mediaStore: memStore(), defaults, getUser: async () => admin, verifyOrigin: () => {}, ...over });
-const req = (method, path, body, headers = {}) => new Request('https://alongside.co.za' + path, { method, body, headers });
+const signedIn = { username: 'Jadian', getUser: async () => ({ email: 'Jadian', roles: ['admin'] }), login: async () => ({}), logoutCookie: () => '' };
+const deps = (over = {}) => ({ contentStore: memStore(), mediaStore: memStore(), defaults, auth: signedIn, ip: '1.2.3.4', ...over });
+const ORIGIN = { origin: 'https://alongside.co.za' };
+const req = (method, path, body, headers = ORIGIN) => new Request('https://alongside.co.za' + path, { method, body, headers });
 const jpeg = new Uint8Array([0xff, 0xd8, 0xff, 0xe0, 1, 2, 3, 4, 5, 6, 7, 8]);
 
 test('public content falls back to defaults', async () => {
@@ -31,20 +37,60 @@ test('public content falls back to defaults', async () => {
   assert.equal(j.founder.name, 'Stephné du Toit-Smit');
 });
 
-test('admin requires a signed-in user', async () => {
-  const r = await handleAdmin(req('GET', '/api/admin/content'), deps({ getUser: async () => null }));
+test('admin requires a signed-in session', async () => {
+  const auth = createAuth({ store: memStore() });
+  const r = await handleAdmin(req('GET', '/api/admin/content'), deps({ auth }));
   assert.equal(r.status, 401);
 });
 
-test('admin requires admin/editor role', async () => {
-  const r = await handleAdmin(req('GET', '/api/admin/content'), deps({ getUser: async () => ({ email: 'a@b.c', roles: [] }) }));
+test('writes from another website are blocked (CSRF)', async () => {
+  let r = await handleAdmin(req('PUT', '/api/admin/founder', JSON.stringify({ founder: { name: 'X' } }), { origin: 'https://evil.example' }), deps());
+  assert.equal(r.status, 403);
+  r = await handleAdmin(req('PUT', '/api/admin/founder', JSON.stringify({ founder: { name: 'X' } }), {}), deps());
   assert.equal(r.status, 403);
 });
 
-test('writes are origin-checked', async () => {
-  const d = deps({ verifyOrigin: () => { const e = new Error('bad'); e.name = 'AuthError'; e.status = 403; throw e; } });
-  const r = await handleAdmin(req('PUT', '/api/admin/founder', JSON.stringify({ founder: { name: 'X' } })), d);
-  assert.equal(r.status, 403);
+test('login: right details give a signed HttpOnly cookie that unlocks the API', async () => {
+  const auth = createAuth({ store: memStore() });
+  const d = deps({ auth });
+  const bad = await handleAdmin(req('POST', '/api/admin/login', JSON.stringify({ username: 'Jadian', password: 'wrong' })), d);
+  assert.equal(bad.status, 401);
+  const ok = await handleAdmin(req('POST', '/api/admin/login', JSON.stringify({ username: 'jadian', password: 'Test-Pass#123' })), d);
+  assert.equal(ok.status, 200);
+  const cookie = ok.headers.get('set-cookie');
+  assert.match(cookie, /^al_admin=[^;]+; Path=\/; HttpOnly; Secure; SameSite=Strict; Max-Age=28800$/);
+  const r = await handleAdmin(new Request('https://alongside.co.za/api/admin/content', { headers: { cookie: cookie.split(';')[0] } }), d);
+  assert.equal(r.status, 200);
+  // tampered cookie is rejected
+  const forged = cookie.split(';')[0].replace(/\.[^.]+$/, '.AAAA');
+  assert.equal((await handleAdmin(new Request('https://alongside.co.za/api/admin/content', { headers: { cookie: forged } }), d)).status, 401);
+});
+
+test('login: wrong password is case-sensitive', async () => {
+  const d = deps({ auth: createAuth({ store: memStore() }) });
+  const r = await handleAdmin(req('POST', '/api/admin/login', JSON.stringify({ username: 'Jadian', password: 'test-pass#123' })), d);
+  assert.equal(r.status, 401);
+});
+
+test('login: 5 wrong attempts lock that address for 15 minutes', async () => {
+  let t = Date.now();
+  const store = memStore();
+  const d = deps({ auth: createAuth({ store, now: () => t }) });
+  const tryLogin = (password) => handleAdmin(req('POST', '/api/admin/login', JSON.stringify({ username: 'Jadian', password })), d);
+  for (let i = 0; i < 5; i++) assert.equal((await tryLogin('nope')).status, 401);
+  assert.equal((await tryLogin('Test-Pass#123')).status, 429); // even the right password is refused while locked
+  t += 16 * 60e3;
+  assert.equal((await tryLogin('Test-Pass#123')).status, 200);
+});
+
+test('expired sessions are rejected', async () => {
+  let t = Date.now();
+  const auth = createAuth({ store: memStore(), now: () => t });
+  const d = deps({ auth });
+  const ok = await handleAdmin(req('POST', '/api/admin/login', JSON.stringify({ username: 'Jadian', password: 'Test-Pass#123' })), d);
+  const c = ok.headers.get('set-cookie').split(';')[0];
+  t += 9 * 3600e3;
+  assert.equal((await handleAdmin(new Request('https://alongside.co.za/api/admin/content', { headers: { cookie: c } }), d)).status, 401);
 });
 
 test('upload accepts real images only, then add + remove a project', async () => {

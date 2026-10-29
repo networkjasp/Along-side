@@ -1,4 +1,335 @@
-(()=>{var O=(t=>typeof require!="undefined"?require:typeof Proxy!="undefined"?new Proxy(t,{get:(e,r)=>(typeof require!="undefined"?require:e)[r]}):t)(function(t){if(typeof require!="undefined")return require.apply(this,arguments);throw Error('Dynamic require of "'+t+'" is not supported')});var me=class extends Error{constructor(t){super(t.statusText),this.name="HTTPError",this.status=t.status}},Je=class extends me{constructor(t,e){super(t),this.name="TextHTTPError",this.data=e}},te=class extends me{constructor(t,e){super(t),this.name="JSONHTTPError",this.json=e}},we=class ge{constructor(e,r){this.apiURL=e||"",this._sameOrigin=/^\/(?!\/)/.test(this.apiURL),this.defaultHeaders=(r==null?void 0:r.defaultHeaders)||{}}headers(e={}){return{...this.defaultHeaders,"Content-Type":"application/json",...e}}static async parseJsonResponse(e){let r=await e.json();if(!e.ok)throw new te(e,r);return r}async request(e,r={}){let n=this.headers(r.headers||{});r.body||delete n["Content-Type"];let o={...r,headers:n};this._sameOrigin&&(o.credentials=r.credentials||"same-origin");let a=await fetch(this.apiURL+e,o),c=a.headers.get("Content-Type");if(c!=null&&c.includes("json"))return ge.parseJsonResponse(a);let i=await a.text();if(!a.ok)throw new Je(a,i);return i}},Fe=class{constructor(t){this.user=t}listUsers(t){return this.user._request("/admin/users",{method:"GET",audience:t})}getUser(t){return this.user._request(`/admin/users/${t.id}`)}updateUser(t,e={}){return this.user._request(`/admin/users/${t.id}`,{method:"PUT",body:JSON.stringify(e)})}createUser(t,e,r={}){return r.email=t,r.password=e,this.user._request("/admin/users",{method:"POST",body:JSON.stringify(r)})}deleteUser(t){return this.user._request(`/admin/users/${t.id}`,{method:"DELETE"})}},Be=60*1e3,D="gotrue.user",K={},q=null,ze={api:1,token:1,audience:1,url:1},Ke={api:1},M=()=>typeof window!="undefined",he=!1;function pe(){!he&&M()&&(he=!0,window.addEventListener("storage",t=>{t.key===D&&(q=null)}))}var ee=class H{constructor(e,r,n){this.token=null,this.api=e,this.url=e.apiURL,this.audience=n,this._processTokenResponse(r),q=this,pe()}static removeSavedSession(){M()&&localStorage.removeItem(D)}static recoverSession(e){if(pe(),q)return q;let r=M()&&localStorage.getItem(D);if(r)try{let n=JSON.parse(r),{url:o,token:a,audience:c}=n;if(!o||!a)return null;let i=e||new we(o,{});return new H(i,a,c)._saveUserData(n,!0)}catch(n){return console.error(new Error(`Gotrue-js: Error recovering session: ${n}`)),null}return null}get admin(){return new Fe(this)}async update(e){let r=await this._request("/user",{method:"PUT",body:JSON.stringify(e)});return this._saveUserData(r)._refreshSavedSession()}jwt(e){let r=this.tokenDetails();if(r==null)return Promise.reject(new Error("Gotrue-js: failed getting jwt access token"));let{expires_at:n,refresh_token:o,access_token:a}=r;return e||n-Be<Date.now()?this._refreshToken(o):Promise.resolve(a)}logout(){return this._request("/logout",{method:"POST"}).then(this.clearSession.bind(this)).catch(this.clearSession.bind(this))}_refreshToken(e){let r=K[e];if(r)return r;let n=this.api.request("/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=refresh_token&refresh_token=${e}`}),o=new Promise((c,i)=>{setTimeout(()=>i(new Error("Token refresh timeout")),3e4)}),a=Promise.race([n,o]).then(c=>{if(delete K[e],this._processTokenResponse(c),this._refreshSavedSession(),!this.token)throw new Error("Gotrue-js: Token not set after refresh");return this.token.access_token}).catch(c=>{throw delete K[e],this.clearSession(),c});return K[e]=a,a}async _request(e,r={}){r.headers=r.headers||{};let n=r.audience||this.audience;n&&(r.headers["X-JWT-AUD"]=n);try{let o=await this.jwt();return await this.api.request(e,{headers:Object.assign(r.headers,{Authorization:`Bearer ${o}`}),...r})}catch(o){throw o instanceof te&&o.json&&(o.json.msg?o.message=o.json.msg:o.json.error&&(o.message=`${o.json.error}: ${o.json.error_description}`)),o}}async getUserData(){let e=await this._request("/user");return this._saveUserData(e)._refreshSavedSession()}_saveUserData(e,r){for(let n in e)n in H.prototype||n in ze||(this[n]=e[n]);return r&&(this._fromStorage=!0),this}_processTokenResponse(e){this.token=e;try{let r=JSON.parse(We(e.access_token.split(".")[1]));this.token.expires_at=r.exp*1e3}catch(r){console.error(new Error(`Gotrue-js: Failed to parse tokenResponse claims: ${r}`))}}_refreshSavedSession(){return M()&&localStorage.getItem(D)&&this._saveSession(),this}get _details(){let e={};for(let r in this)r in H.prototype||r in Ke||(e[r]=this[r]);return e}_saveSession(){return M()&&localStorage.setItem(D,JSON.stringify(this._details)),this}tokenDetails(){return this.token}clearSession(){H.removeSavedSession(),this.token=null,q=null}};function Ve(t){return typeof atob=="function"?atob(t):Buffer.from(t,"base64").toString("binary")}function We(t){let e=t.replace(/-/g,"+").replace(/_/g,"/");switch(e.length%4){case 0:break;case 2:e+="==";break;case 3:e+="=";break;default:throw new Error("Illegal base64url string!")}let r=Ve(e);try{let n=Uint8Array.from(r,o=>{var a;return(a=o.codePointAt(0))!=null?a:0});return new TextDecoder().decode(n)}catch{return r}}var Ye=/^http:\/\//,Xe="/.netlify/identity",re=class{constructor({APIUrl:t=Xe,audience:e="",setCookie:r=!1,clientName:n="gotrue-js"}={}){Ye.test(t)&&console.warn(`Warning:
+(function () {
+'use strict';
+// Alongside Website Manager (browser). Plain script, no build step needed.
+// All text is inserted with textContent (never innerHTML) so content can't inject code.
 
-DO NOT USE HTTP IN PRODUCTION FOR GOTRUE EVER!
-GoTrue REQUIRES HTTPS to work securely.`),e&&(this.audience=e),this.setCookie=r,this.api=new we(t,{defaultHeaders:{"X-Nf-Client":n}})}async _request(t,e={}){e.headers=e.headers||{};let r=e.audience||this.audience;r&&(e.headers["X-JWT-AUD"]=r);try{return await this.api.request(t,e)}catch(n){throw n instanceof te&&n.json&&(n.json.msg?n.message=n.json.msg:n.json.error&&(n.message=`${n.json.error}: ${n.json.error_description}`)),n}}settings(){return this._request("/settings")}signup(t,e,r){return this._request("/signup",{method:"POST",body:JSON.stringify({email:t,password:e,data:r})})}login(t,e,r){return this._setRememberHeaders(r),this._request("/token",{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:`grant_type=password&username=${encodeURIComponent(t)}&password=${encodeURIComponent(e)}`}).then(n=>(ee.removeSavedSession(),this.createUser(n,r)))}loginExternalUrl(t){return`${this.api.apiURL}/authorize?provider=${t}`}confirm(t,e){return this._setRememberHeaders(e),this.verify("signup",t,e)}requestPasswordRecovery(t){return this._request("/recover",{method:"POST",body:JSON.stringify({email:t})})}recover(t,e){return this._setRememberHeaders(e),this.verify("recovery",t,e)}acceptInvite(t,e,r){return this._setRememberHeaders(r),this._request("/verify",{method:"POST",body:JSON.stringify({token:t,password:e,type:"signup"})}).then(n=>this.createUser(n,r))}acceptInviteExternalUrl(t,e){return`${this.api.apiURL}/authorize?provider=${t}&invite_token=${e}`}createUser(t,e=!1){return this._setRememberHeaders(e),new ee(this.api,t,this.audience||"").getUserData().then(n=>(e&&n._saveSession(),n))}currentUser(){let t=ee.recoverSession(this.api);return t&&this._setRememberHeaders(t._fromStorage),t}async validateCurrentSession(){let t=this.currentUser();if(!t)return null;try{return await t.getUserData()}catch{return t.clearSession(),null}}verify(t,e,r){return this._setRememberHeaders(r),this._request("/verify",{method:"POST",body:JSON.stringify({token:e,type:t})}).then(n=>this.createUser(n,r))}_setRememberHeaders(t){this.setCookie&&(this.api.defaultHeaders=this.api.defaultHeaders||{},this.api.defaultHeaders["X-Use-Cookie"]=t?"1":"session")}};typeof window!="undefined"&&(window.GoTrue=re);var ye=(t=>typeof O!="undefined"?O:typeof Proxy!="undefined"?new Proxy(t,{get:(e,r)=>(typeof O!="undefined"?O:e)[r]}):t)(function(t){if(typeof O!="undefined")return O.apply(this,arguments);throw Error('Dynamic require of "'+t+'" is not supported')}),Qe=["google","github","gitlab","bitbucket","facebook","email"],h=class ne extends Error{constructor(e,r,n){super(e),this.name="AuthError",this.status=r,n&&"cause"in n&&(this.cause=n.cause)}static from(e){if(e instanceof ne)return e;let r=e instanceof Error?e.message:String(e);return new ne(r,void 0,{cause:e})}},Ze=class extends Error{constructor(t="Netlify Identity is not available."){super(t),this.name="MissingIdentityError"}},x="/.netlify/identity",V=null,k,ve=!1,R=()=>typeof window!="undefined"&&typeof window.location!="undefined",et=()=>{var t,e,r;if(k!==void 0)return k;if(R())k=`${window.location.origin}${x}`;else{let n=ae();n!=null&&n.url?k=n.url:(e=(t=globalThis.Netlify)==null?void 0:t.context)!=null&&e.url?k=new URL(x,globalThis.Netlify.context.url).href:typeof process!="undefined"&&((r=process.env)!=null&&r.URL)&&(k=new URL(x,process.env.URL).href)}return k!=null?k:null},se=()=>{if(V)return V;let t=et();return t?(V=new re({APIUrl:t,setCookie:!1}),V):(ve||(console.warn("@netlify/identity: Could not determine the Identity endpoint URL. Make sure your site has Netlify Identity enabled, or run your app with `netlify dev`."),ve=!0),null)},P=()=>{let t=se();if(!t)throw new Ze;return t},ae=()=>{var r,n,o;let t=globalThis.netlifyIdentityContext;if(t!=null&&t.url)return{url:t.url,token:t.token};if((n=(r=globalThis.Netlify)==null?void 0:r.context)!=null&&n.url)return{url:new URL(x,globalThis.Netlify.context.url).href};let e=typeof process!="undefined"?(o=process.env)==null?void 0:o.URL:void 0;return e?{url:new URL(x,e).href}:null},U="nf_jwt",G="nf_refresh",Y=t=>{if(typeof document=="undefined")return null;let e=new RegExp(`(?:^|; )${t.replace(/[.*+?^${}()|[\]\\]/g,"\\$&")}=([^;]*)`).exec(document.cookie);if(!e)return null;try{return decodeURIComponent(e[1])}catch{return e[1]}},tt=(t,e,r)=>{t.set({name:U,value:e,httpOnly:!1,secure:!0,path:"/",sameSite:"Lax"}),r&&t.set({name:G,value:r,httpOnly:!1,secure:!0,path:"/",sameSite:"Lax"})},rt=t=>{t.delete(U),t.delete(G)},J=(t,e)=>{typeof document!="undefined"&&(document.cookie=`${U}=${encodeURIComponent(t)}; path=/; secure; samesite=lax`,e&&(document.cookie=`${G}=${encodeURIComponent(e)}; path=/; secure; samesite=lax`))},_e=()=>{typeof document!="undefined"&&(document.cookie=`${U}=; path=/; secure; samesite=lax; expires=Thu, 01 Jan 1970 00:00:00 GMT`,document.cookie=`${G}=; path=/; secure; samesite=lax; expires=Thu, 01 Jan 1970 00:00:00 GMT`)},nt=t=>{var r,n,o;let e=(n=(r=globalThis.Netlify)==null?void 0:r.context)==null?void 0:n.cookies;return!e||typeof e.get!="function"?null:(o=e.get(t))!=null?o:null},$,ot=()=>{if($===null)return;if($===void 0)try{if(typeof ye=="undefined"){$=null;return}$=ye("next/headers").headers}catch{$=null;return}let t=$;if(t)try{t()}catch(e){if(e instanceof Error&&("digest"in e||/bail\s*out.*prerende/i.test(e.message)))throw e}},st=5e3,X=async(t,e={},r=st)=>{let n=new AbortController,o=setTimeout(()=>{n.abort()},r);try{return await fetch(t,{...e,signal:n.signal})}catch(a){if(a instanceof Error&&a.name==="AbortError"){let c=new URL(t).pathname;throw new h(`Identity request to ${c} timed out after ${String(r)}ms`)}throw a}finally{clearTimeout(o)}},v={LOGIN:"login",LOGOUT:"logout",TOKEN_REFRESH:"token_refresh",USER_UPDATED:"user_updated",RECOVERY:"recovery"};var at=new Set,_=(t,e)=>{for(let r of at)try{r(t,e)}catch{}};var it=60,W=null,b=()=>{if(!R())return;oe();let t=se(),e=t==null?void 0:t.currentUser();if(!e)return;let r=e.tokenDetails();if(!(r!=null&&r.expires_at))return;let n=Math.floor(Date.now()/1e3),o=typeof r.expires_at=="number"&&r.expires_at>1e12?Math.floor(r.expires_at/1e3):r.expires_at,a=Math.max(0,o-n-it)*1e3;W=setTimeout(()=>{(async()=>{try{let c=await e.jwt(!0),i=e.tokenDetails();J(c,i==null?void 0:i.refresh_token),_(v.TOKEN_REFRESH,m(e)),b()}catch{oe()}})()},a)},oe=()=>{W!==null&&(clearTimeout(W),W=null)};var ke=()=>{var e,r;let t=(r=(e=globalThis.Netlify)==null?void 0:e.context)==null?void 0:r.cookies;if(!t)throw new h("Server-side auth requires Netlify Functions runtime");return t},Ue=()=>{let t=ae();if(!(t!=null&&t.url))throw new h("Could not determine the Identity endpoint URL on the server");return t.url},N=!0,ie=async(t,e)=>{var n,o,a,c;if(!R()){let i=Ue(),l=ke(),u=new URLSearchParams({grant_type:"password",username:t,password:e}),d;try{d=await X(`${i}/token`,{method:"POST",headers:{"Content-Type":"application/x-www-form-urlencoded"},body:u.toString()})}catch(T){throw h.from(T)}if(!d.ok){let T=await d.json().catch(()=>({}));throw new h((o=(n=T.msg)!=null?n:T.error_description)!=null?o:`Login failed (${String(d.status)})`,d.status)}let w=await d.json(),z=w.access_token,S;try{S=await X(`${i}/user`,{headers:{Authorization:`Bearer ${z}`}})}catch(T){throw h.from(T)}if(!S.ok){let T=await S.json().catch(()=>({}));throw new h((a=T.msg)!=null?a:`Failed to fetch user data (${String(S.status)})`,S.status)}let Z=await S.json(),I=m(Z);return tt(l,z,w.refresh_token),I}let r=P();try{let i=await r.login(t,e,N),l=await i.jwt();J(l,(c=i.tokenDetails())==null?void 0:c.refresh_token);let u=m(i);return b(),_(v.LOGIN,u),u}catch(i){throw h.from(i)}};var be=async()=>{if(!R()){let e=Ue(),r=ke(),n=r.get(U);if(n)try{await X(`${e}/logout`,{method:"POST",headers:{Authorization:`Bearer ${n}`}})}catch{}rt(r);return}let t=P();try{let e=t.currentUser();e&&await e.logout(),_e(),oe(),_(v.LOGOUT,null)}catch(e){throw h.from(e)}};var Se=async()=>{if(!R())return null;let t=window.location.hash.substring(1);if(!t)return null;let e=P(),r=new URLSearchParams(t);try{let n=r.get("access_token");if(n)return await ct(e,r,n);let o=r.get("confirmation_token");if(o)return await lt(e,o);let a=r.get("recovery_token");if(a)return await ut(e,a);let c=r.get("invite_token");if(c)return dt(c);let i=r.get("email_change_token");return i?await ft(e,i):null}catch(n){throw n instanceof h?n:h.from(n)}},ct=async(t,e,r)=>{var l,u,d,w;let n=(l=e.get("refresh_token"))!=null?l:"",o=parseInt((u=e.get("expires_in"))!=null?u:"",10),a=parseInt((d=e.get("expires_at"))!=null?d:"",10),c=await t.createUser({access_token:r,token_type:(w=e.get("token_type"))!=null?w:"bearer",expires_in:isFinite(o)?o:3600,expires_at:isFinite(a)?a:Math.floor(Date.now()/1e3)+3600,refresh_token:n},N);J(r,n||void 0);let i=m(c);return b(),F(),_(v.LOGIN,i),{type:"oauth",user:i}},lt=async(t,e)=>{var a;let r=await t.confirm(e,N),n=await r.jwt();J(n,(a=r.tokenDetails())==null?void 0:a.refresh_token);let o=m(r);return b(),F(),_(v.LOGIN,o),{type:"confirmation",user:o}},ut=async(t,e)=>{var a;let r=await t.recover(e,N),n=await r.jwt();J(n,(a=r.tokenDetails())==null?void 0:a.refresh_token);let o=m(r);return b(),F(),_(v.RECOVERY,o),{type:"recovery",user:o}},dt=t=>(F(),{type:"invite",user:null,token:t}),ft=async(t,e)=>{var l;let r=t.currentUser();if(!r)throw new h("Email change verification requires an active browser session");let n=await r.jwt(),o=`${window.location.origin}${x}`,a=await fetch(`${o}/user`,{method:"PUT",headers:{"Content-Type":"application/json",Authorization:`Bearer ${n}`},body:JSON.stringify({email_change_token:e})});if(!a.ok){let u=await a.json().catch(()=>({}));throw new h((l=u.msg)!=null?l:`Email change verification failed (${String(a.status)})`,a.status)}let c=await a.json(),i=m(c);return F(),_(v.USER_UPDATED,i),{type:"email_change",user:i}},F=()=>{history.replaceState(null,"",window.location.pathname+window.location.search)},Te=async()=>{var u,d;if(!R())return null;let t=P(),e=t.currentUser();if(e)return b(),m(e);let r=Y(U);if(!r)return null;let n=(u=Y(G))!=null?u:"",o=Re(r),a=(d=o==null?void 0:o.exp)!=null?d:Math.floor(Date.now()/1e3)+3600,c=Math.max(0,a-Math.floor(Date.now()/1e3)),i;try{i=await t.createUser({access_token:r,token_type:"bearer",expires_in:c,expires_at:a,refresh_token:n},N)}catch{return _e(),null}let l=m(i);return b(),_(v.LOGIN,l),l},Ee=t=>typeof t=="string"&&Qe.includes(t)?t:void 0,E=t=>typeof t=="string"&&t!==""?t:void 0,xe=t=>{let e=t.roles;if(Array.isArray(e)&&e.every(r=>typeof r=="string"))return e},m=t=>{var a,c,i;let e=(a=t.user_metadata)!=null?a:{},r=(c=t.app_metadata)!=null?c:{},n=(i=e.full_name)!=null?i:e.name,o=e.avatar_url;return{id:t.id,email:t.email,confirmedAt:E(t.confirmed_at),createdAt:t.created_at,updatedAt:t.updated_at,role:E(t.role),provider:Ee(r.provider),name:typeof n=="string"?n:void 0,pictureUrl:typeof o=="string"?o:void 0,roles:xe(r),invitedAt:E(t.invited_at),confirmationSentAt:E(t.confirmation_sent_at),recoverySentAt:E(t.recovery_sent_at),pendingEmail:E(t.new_email),emailChangeSentAt:E(t.email_change_sent_at),lastSignInAt:E(t.last_sign_in_at),userMetadata:e,appMetadata:r}},ht=t=>{var a,c,i,l;let e=(a=t.app_metadata)!=null?a:{},r=(c=t.user_metadata)!=null?c:{},n=(i=r.full_name)!=null?i:r.name,o=r.avatar_url;return{id:(l=t.sub)!=null?l:"",email:t.email,provider:Ee(e.provider),name:typeof n=="string"?n:void 0,pictureUrl:typeof o=="string"?o:void 0,roles:xe(e),userMetadata:r,appMetadata:e}},Re=t=>{try{let e=t.split(".");if(e.length!==3)return null;let r=atob(e[1].replace(/-/g,"+").replace(/_/g,"/"));return JSON.parse(r)}catch{return null}},pt=async(t,e)=>{try{let r=await X(`${t}/user`,{headers:{Authorization:`Bearer ${e}`}});if(!r.ok)return null;let n=await r.json();return m(n)}catch{return null}},mt=()=>{var r,n,o;let t=ae();if(t!=null&&t.url)return t.url;if((n=(r=globalThis.Netlify)==null?void 0:r.context)!=null&&n.url)return new URL(x,globalThis.Netlify.context.url).href;let e=typeof process!="undefined"?(o=process.env)==null?void 0:o.URL:void 0;return e?new URL(x,e).href:null},je=async()=>{var n,o,a;if(R()){let c=se(),i=(n=c==null?void 0:c.currentUser())!=null?n:null;if(i){if(!Y(U)){try{i.clearSession()}catch{}return null}return b(),m(i)}let l=Y(U);if(!l||!Re(l))return null;let d=await Te();return d!=null?d:null}ot();let t=globalThis.netlifyIdentityContext,e=(o=t==null?void 0:t.token)!=null?o:nt(U);if(e){let c=mt();if(c){let i=await pt(c,e);if(i)return i}}let r=(a=t==null?void 0:t.user)!=null?a:null;return r?ht(r):null};var wt=async()=>{let t=P(),e=t.currentUser();if(!e&&R()){try{await Te()}catch{}e=t.currentUser()}if(!e)throw new h("No user is currently logged in");return e},Ce=async t=>{let e=P();try{await e.requestPasswordRecovery(t)}catch(r){throw h.from(r)}};var Oe=async(t,e)=>{let r=P();try{let n=await r.acceptInvite(t,e,N),o=m(n);return b(),_(v.LOGIN,o),o}catch(n){throw h.from(n)}};var Pe=async t=>{let e=await wt();try{let r=await e.update(t),n=m(r);return _(v.USER_UPDATED,n),n}catch(r){throw h.from(r)}};var s=t=>document.getElementById(t),gt={campaigns:"Campaigns",branding:"Branding",communications:"Communications",digital:"Digital"},yt=2e3,vt=15e5,p={portfolio:[],founder:{name:"",photo:"",alt:""}},A=-1,j=null,L=null,Ie=null,ce=null,Ae;function f(t,e=!1){let r=s("toast");r.textContent=t,r.className="toast show"+(e?" err":""),clearTimeout(Ae),Ae=setTimeout(()=>{r.className="toast"},e?6e3:3500)}function Q(t){["loading","auth","app"].forEach(e=>{s(e).hidden=e!==t})}function C(t){["login-form","forgot-form","password-form"].forEach(r=>{s(r).hidden=r!==t}),Q("auth");let e=s(t).querySelector("input");e&&e.focus()}function y(t,e,r){t&&(e?(t.dataset.label=t.textContent,t.textContent=r||"Saving\u2026",t.disabled=!0):(t.textContent=t.dataset.label||t.textContent,t.disabled=!1))}function g(t,e={},r){let n=document.createElement(t);return Object.entries(e).forEach(([o,a])=>{o==="class"?n.className=a:o in n&&o!=="list"?n[o]=a:n.setAttribute(o,a)}),r!=null&&(n.textContent=r),n}var ue=t=>t&&t.startsWith("/")?t:t||"";async function de(t,e={}){let r=await fetch("/api/admin/"+t,{credentials:"same-origin",...e}),n={};try{n=await r.json()}catch{}if(r.status===401)throw Q("auth"),C("login-form"),new Error("Your session has expired. Please sign in again.");if(!r.ok)throw new Error(n.error||`Something went wrong (${r.status}).`);return n}var $e=(t,e)=>de(t,{method:"PUT",headers:{"Content-Type":"application/json"},body:JSON.stringify(e)});async function Ne(t,e){let r=new FormData;r.append("file",t,e);let{url:n}=await de("upload",{method:"POST",body:r});return n}async function De(t){if(!/^image\/(jpeg|png|webp)$/.test(t.type))throw new Error("Please choose a JPG, PNG or WebP image.");if(t.size>25e6)throw new Error("That image is very large. Please choose one under 25 MB.");let e=await createImageBitmap(t),r=Math.min(1,yt/Math.max(e.width,e.height));if(r===1&&t.size<=vt&&t.type!=="image/jpeg")return{blob:t,name:t.name};let n=Math.round(e.width*r),o=Math.round(e.height*r),a=document.createElement("canvas");a.width=n,a.height=o;let c=a.getContext("2d"),i=t.type!=="image/jpeg";i||(c.fillStyle="#fff",c.fillRect(0,0,n,o)),c.drawImage(e,0,0,n,o);let l=i?"image/webp":"image/jpeg",u=await new Promise(w=>a.toBlob(w,l,.86));(!u||u.type!==l)&&(l=i?"image/png":"image/jpeg",u=await new Promise(w=>a.toBlob(w,l,.86)));let d={"image/jpeg":"jpg","image/png":"png","image/webp":"webp"}[l];return{blob:u,name:t.name.replace(/\.[^.]+$/,"")+"."+d}}function qe(){let t=s("projects");t.replaceChildren(),s("projects-empty").hidden=p.portfolio.length>0,p.portfolio.forEach((e,r)=>{let n=g("li",{class:"project"+(e.hidden?" is-hidden":"")}),o=g("div",{class:"thumb"});o.append(g("img",{src:ue(e.image),alt:"",loading:"lazy"}));let a=g("div");a.append(g("p",{class:"p-title"},e.title));let c=g("div",{class:"p-meta"});c.append(g("span",{class:"tag"},gt[e.category]||e.category)),e.show_on_home&&c.append(g("span",{class:"tag home"},"Home page")),e.hidden&&c.append(g("span",{class:"tag draft"},"Hidden (draft)")),e.link&&c.append(g("span",{class:"tag"},"Has link")),a.append(c);let i=g("div",{class:"p-actions"}),l=(w,z,S,Z="")=>{let I=g("button",{type:"button",class:"icon-btn "+Z},w);return I.dataset.action=z,I.dataset.index=String(r),I.setAttribute("aria-label",`${S}: ${e.title}`),I},u=l("\u2191","up","Move up");u.disabled=r===0;let d=l("\u2193","down","Move down");d.disabled=r===p.portfolio.length-1,i.append(u,d,l("Edit","edit","Edit"),l("Remove","remove","Remove","danger")),n.append(o,a,i),t.append(n)})}async function le(t,e){p=(await $e("portfolio",{portfolio:t})).content,qe(),f(e+" It is live on the website now.")}s("projects").addEventListener("click",async t=>{let e=t.target.closest("button[data-action]");if(!e)return;let r=Number(e.dataset.index),n=p.portfolio.slice();try{if(e.dataset.action==="edit")return Me(r);if(e.dataset.action==="remove"){s("confirm-text").textContent=`\u201C${n[r].title}\u201D will be removed from the website.`;let c=s("confirm-dialog");c.returnValue="",c.showModal(),c.addEventListener("close",async()=>{if(c.returnValue==="yes"){n.splice(r,1);try{await le(n,"Project removed.")}catch(i){f(i.message,!0)}}},{once:!0});return}let o=e.dataset.action==="up"?r-1:r+1;[n[r],n[o]]=[n[o],n[r]],e.disabled=!0,await le(n,"Order saved.");let a=s("projects").querySelector(`button[data-action="${e.dataset.action}"][data-index="${o}"]`);a&&!a.disabled&&a.focus()}catch(o){f(o.message,!0)}});function Me(t){A=t,j=null;let e=t>=0?p.portfolio[t]:{title:"",category:"campaigns",image:"",alt:"",link:"",show_on_home:!1,hidden:!1};s("dlg-h").textContent=t>=0?"Edit project":"Add project",s("p-title").value=e.title,s("p-category").value=e.category,s("p-alt").value=e.alt||"",s("p-link").value=e.link||"",s("p-home").checked=!!e.show_on_home,s("p-hidden").checked=!!e.hidden,s("p-file").value="",s("p-error").textContent="";let r=s("p-preview");r.hidden=!e.image,e.image&&(r.src=ue(e.image)),s("project-dialog").showModal(),s("p-title").focus()}s("add-project").addEventListener("click",()=>Me(-1));s("p-cancel").addEventListener("click",()=>s("project-dialog").close());s("p-file").addEventListener("change",async()=>{let t=s("p-file").files[0];if(s("p-error").textContent="",!!t)try{j=await De(t);let e=s("p-preview");e.src=URL.createObjectURL(j.blob),e.hidden=!1,s("p-alt").value||(s("p-alt").value=s("p-title").value)}catch(e){j=null,s("p-file").value="",s("p-error").textContent=e.message}});s("project-form").addEventListener("submit",async t=>{t.preventDefault();let e=s("p-error");e.textContent="";let r=s("p-title").value.trim(),n=s("p-link").value.trim(),o=A>=0?p.portfolio[A]:null;if(!r){e.textContent="Please enter a project title.",s("p-title").focus();return}if(!j&&!(o!=null&&o.image)){e.textContent="Please choose an image.",s("p-file").focus();return}if(n&&!/^https:\/\//i.test(n)){e.textContent="The link must start with https://",s("p-link").focus();return}let a=p.portfolio.filter((i,l)=>i.show_on_home&&l!==A).length,c=s("p-save");y(c,!0);try{let i=(o==null?void 0:o.image)||"";j&&(c.textContent="Uploading image\u2026",i=await Ne(j.blob,j.name));let l={title:r,category:s("p-category").value,image:i,alt:s("p-alt").value.trim()||r,link:n,show_on_home:s("p-home").checked,hidden:s("p-hidden").checked},u=p.portfolio.slice();A>=0?u[A]=l:u.unshift(l),await le(u,A>=0?"Project updated.":"Project added."),s("project-dialog").close(),l.show_on_home&&a>=4&&f("Saved. Note: only the first four \u201CHome page\u201D projects are shown on the Home page.")}catch(i){e.textContent=i.message}finally{y(c,!1)}});function He(){let t=p.founder;s("founder-name").value=t.name||"",s("founder-alt").value=t.alt||"";let e=!!t.photo;s("founder-img").hidden=!e,s("founder-placeholder").hidden=e,e&&(s("founder-img").src=ue(t.photo),s("founder-img").alt=t.alt||t.name),s("founder-caption").textContent=e?"Current photo":"No photo yet. The logo mark is shown instead.",s("founder-remove").hidden=!e,s("founder-file").value="",L=null}s("founder-file").addEventListener("change",async()=>{let t=s("founder-file").files[0];if(t)try{L=await De(t),s("founder-img").src=URL.createObjectURL(L.blob),s("founder-img").hidden=!1,s("founder-placeholder").hidden=!0,s("founder-caption").textContent="New photo, not saved yet. Click Save."}catch(e){L=null,s("founder-file").value="",f(e.message,!0)}});async function Ge(t){let e=s("founder-name").value.trim();if(!e){f("Please enter a name.",!0),s("founder-name").focus();return}let r=t!==void 0?t:p.founder.photo;t===void 0&&L&&(r=await Ne(L.blob,L.name)),p=(await $e("founder",{founder:{name:e,photo:r,alt:s("founder-alt").value.trim()||e}})).content,He()}s("founder-form").addEventListener("submit",async t=>{t.preventDefault();let e=t.submitter||s("founder-form").querySelector("button[type=submit]");y(e,!0);try{await Ge(),f("Founder photo saved. It is live on the About page now.")}catch(r){f(r.message,!0)}finally{y(e,!1)}});s("founder-remove").addEventListener("click",async()=>{let t=s("founder-remove");y(t,!0,"Removing\u2026");try{await Ge(""),f("Photo removed. The logo mark is shown instead.")}catch(e){f(e.message,!0)}finally{y(t,!1)}});var B=[["tab-portfolio","panel-portfolio"],["tab-founder","panel-founder"]];function Le(t){B.forEach(([e,r])=>{let n=e===t;s(e).setAttribute("aria-selected",String(n)),s(e).tabIndex=n?0:-1,s(r).hidden=!n})}B.forEach(([t],e)=>{s(t).addEventListener("click",()=>Le(t)),s(t).addEventListener("keydown",r=>{if(r.key!=="ArrowRight"&&r.key!=="ArrowLeft")return;let n=B[(e+(r.key==="ArrowRight"?1:B.length-1))%B.length][0];Le(n),s(n).focus()})});async function fe(){var e;s("toast").className="toast",Q("loading");let t=await de("content");p={portfolio:t.portfolio,founder:t.founder},s("user-email").textContent=((e=t.user)==null?void 0:e.email)||"",s("bar-user").hidden=!1,qe(),He(),Q("app")}s("login-form").addEventListener("submit",async t=>{t.preventDefault();let e=t.submitter;y(e,!0,"Signing in\u2026");try{await ie(s("login-email").value.trim(),s("login-password").value),s("login-password").value="",await fe()}catch(r){f(/invalid|grant|password|credential/i.test(r.message)?"Email or password is incorrect.":r.message,!0)}finally{y(e,!1)}});s("show-forgot").addEventListener("click",()=>{s("forgot-email").value=s("login-email").value,C("forgot-form")});s("back-login").addEventListener("click",()=>C("login-form"));s("forgot-form").addEventListener("submit",async t=>{t.preventDefault();let e=t.submitter;y(e,!0,"Sending\u2026");try{await Ce(s("forgot-email").value.trim())}catch{}y(e,!1),f("If that email has an account, a reset link is on its way."),C("login-form")});s("password-form").addEventListener("submit",async t=>{t.preventDefault();let e=s("new-password").value,r=s("new-password2").value;if(e.length<10){f("Please use at least 10 characters.",!0);return}if(e!==r){f("The two passwords do not match.",!0);return}let n=t.submitter;y(n,!0);try{if(ce==="invite"){let o=await Oe(Ie,e);await ie(o.email,e)}else await Pe({password:e});history.replaceState(null,"",location.pathname),f("Password saved."),await fe()}catch(o){f(o.message,!0)}finally{y(n,!1),s("new-password").value="",s("new-password2").value=""}});s("logout").addEventListener("click",async()=>{try{await be()}catch{}s("bar-user").hidden=!0,p={portfolio:[],founder:{}},C("login-form")});(async function(){try{let e=await Se();if((e==null?void 0:e.type)==="invite"&&e.token){Ie=e.token,ce="invite",s("password-h").textContent="Welcome! Choose your password",C("password-form");return}if((e==null?void 0:e.type)==="recovery"){ce="recovery",s("password-h").textContent="Choose a new password",C("password-form");return}}catch{history.replaceState(null,"",location.pathname),f("That link has expired or was already used. Please sign in or request a new reset link.",!0)}try{if(await je()){await fe();return}}catch(e){f(e.message,!0)}C("login-form")})();})();
+
+const $ = (id) => document.getElementById(id);
+const CAT = { campaigns: 'Campaigns', branding: 'Branding', communications: 'Communications', digital: 'Digital' };
+const MAX_SIDE = 2000;           // longest side after resizing
+const KEEP_IF_UNDER = 1.5e6;     // upload untouched if already small enough
+
+let state = { portfolio: [], founder: { name: '', photo: '', alt: '' } };
+let editIndex = -1;              // -1 = adding
+let pendingProjectFile = null;   // processed Blob waiting to upload
+let pendingFounderFile = null;
+
+/* ---------------- UI helpers ---------------- */
+let toastTimer;
+function toast(msg, isErr = false) {
+  const t = $('toast');
+  t.textContent = msg;
+  t.className = 'toast show' + (isErr ? ' err' : '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => { t.className = 'toast'; }, isErr ? 6000 : 3500);
+}
+function show(id) {
+  ['loading', 'auth', 'app'].forEach((x) => { $(x).hidden = x !== id; });
+}
+function busy(btn, on, label) {
+  if (!btn) return;
+  if (on) { btn.dataset.label = btn.textContent; btn.textContent = label || 'Saving…'; btn.disabled = true; }
+  else { btn.textContent = btn.dataset.label || btn.textContent; btn.disabled = false; }
+}
+function el(tag, attrs = {}, text) {
+  const n = document.createElement(tag);
+  Object.entries(attrs).forEach(([k, v]) => {
+    if (k === 'class') n.className = v; else if (k in n && k !== 'list') n[k] = v; else n.setAttribute(k, v);
+  });
+  if (text != null) n.textContent = text;
+  return n;
+}
+// Media paths are stored site-relative (/media/…, /assets/…); the admin lives in /admin/.
+const viewSrc = (src) => (src && src.startsWith('/') ? src : src || '');
+
+/* ---------------- API ---------------- */
+async function api(path, opts = {}) {
+  const res = await fetch('/api/admin/' + path, { credentials: 'same-origin', ...opts });
+  let data = {};
+  try { data = await res.json(); } catch { /* empty */ }
+  if (res.status === 401) { showLogin(); throw new Error('Please sign in.'); }
+  if (!res.ok) throw new Error(data.error || `Something went wrong (${res.status}).`);
+  return data;
+}
+const putJSON = (path, body) => api(path, { method: 'PUT', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify(body) });
+
+async function uploadImage(blob, name) {
+  const fd = new FormData();
+  fd.append('file', blob, name);
+  const { url } = await api('upload', { method: 'POST', body: fd });
+  return url;
+}
+
+/* ---------------- image processing (resize + strip location data) ---------------- */
+async function prepareImage(file) {
+  if (!/^image\/(jpeg|png|webp)$/.test(file.type)) throw new Error('Please choose a JPG, PNG or WebP image.');
+  if (file.size > 25e6) throw new Error('That image is very large. Please choose one under 25 MB.');
+  const bmp = await createImageBitmap(file);
+  const scale = Math.min(1, MAX_SIDE / Math.max(bmp.width, bmp.height));
+  // Small PNG/WebP (e.g. logos with transparency) are kept as they are.
+  if (scale === 1 && file.size <= KEEP_IF_UNDER && file.type !== 'image/jpeg') return { blob: file, name: file.name };
+  const w = Math.round(bmp.width * scale), h = Math.round(bmp.height * scale);
+  const canvas = document.createElement('canvas');
+  canvas.width = w; canvas.height = h;
+  const ctx = canvas.getContext('2d');
+  const keepAlpha = file.type !== 'image/jpeg';
+  if (!keepAlpha) { ctx.fillStyle = '#fff'; ctx.fillRect(0, 0, w, h); }
+  ctx.drawImage(bmp, 0, 0, w, h);
+  let type = keepAlpha ? 'image/webp' : 'image/jpeg';
+  let blob = await new Promise((r) => canvas.toBlob(r, type, 0.86));
+  if (!blob || blob.type !== type) { type = keepAlpha ? 'image/png' : 'image/jpeg'; blob = await new Promise((r) => canvas.toBlob(r, type, 0.86)); }
+  const ext = { 'image/jpeg': 'jpg', 'image/png': 'png', 'image/webp': 'webp' }[type];
+  return { blob, name: file.name.replace(/\.[^.]+$/, '') + '.' + ext };
+}
+
+/* ---------------- portfolio list ---------------- */
+function renderProjects() {
+  const list = $('projects');
+  list.replaceChildren();
+  $('projects-empty').hidden = state.portfolio.length > 0;
+  state.portfolio.forEach((p, i) => {
+    const li = el('li', { class: 'project' + (p.hidden ? ' is-hidden' : '') });
+    const th = el('div', { class: 'thumb' });
+    th.append(el('img', { src: viewSrc(p.image), alt: '', loading: 'lazy' }));
+    const info = el('div');
+    info.append(el('p', { class: 'p-title' }, p.title));
+    const meta = el('div', { class: 'p-meta' });
+    meta.append(el('span', { class: 'tag' }, CAT[p.category] || p.category));
+    if (p.show_on_home) meta.append(el('span', { class: 'tag home' }, 'Home page'));
+    if (p.hidden) meta.append(el('span', { class: 'tag draft' }, 'Hidden (draft)'));
+    if (p.link) meta.append(el('span', { class: 'tag' }, 'Has link'));
+    info.append(meta);
+    const act = el('div', { class: 'p-actions' });
+    const mk = (label, action, aria, extra = '') => {
+      const b = el('button', { type: 'button', class: 'icon-btn ' + extra }, label);
+      b.dataset.action = action; b.dataset.index = String(i);
+      b.setAttribute('aria-label', `${aria}: ${p.title}`);
+      return b;
+    };
+    const up = mk('↑', 'up', 'Move up'); up.disabled = i === 0;
+    const dn = mk('↓', 'down', 'Move down'); dn.disabled = i === state.portfolio.length - 1;
+    act.append(up, dn, mk('Edit', 'edit', 'Edit'), mk('Remove', 'remove', 'Remove', 'danger'));
+    li.append(th, info, act);
+    list.append(li);
+  });
+}
+
+async function savePortfolio(next, message) {
+  const data = await putJSON('portfolio', { portfolio: next });
+  state = data.content;
+  renderProjects();
+  toast(message + ' It is live on the website now.');
+}
+
+$('projects').addEventListener('click', async (e) => {
+  const b = e.target.closest('button[data-action]');
+  if (!b) return;
+  const i = Number(b.dataset.index);
+  const items = state.portfolio.slice();
+  try {
+    if (b.dataset.action === 'edit') return openProject(i);
+    if (b.dataset.action === 'remove') {
+      $('confirm-text').textContent = `“${items[i].title}” will be removed from the website.`;
+      const dlg = $('confirm-dialog');
+      dlg.returnValue = '';
+      dlg.showModal();
+      dlg.addEventListener('close', async () => {
+        if (dlg.returnValue !== 'yes') return;
+        items.splice(i, 1);
+        try { await savePortfolio(items, 'Project removed.'); } catch (err) { toast(err.message, true); }
+      }, { once: true });
+      return;
+    }
+    const j = b.dataset.action === 'up' ? i - 1 : i + 1;
+    [items[i], items[j]] = [items[j], items[i]];
+    b.disabled = true;
+    await savePortfolio(items, 'Order saved.');
+    const again = $('projects').querySelector(`button[data-action="${b.dataset.action}"][data-index="${j}"]`);
+    if (again && !again.disabled) again.focus();
+  } catch (err) { toast(err.message, true); }
+});
+
+/* ---------------- add / edit dialog ---------------- */
+function openProject(i) {
+  editIndex = i;
+  pendingProjectFile = null;
+  const p = i >= 0 ? state.portfolio[i] : { title: '', category: 'campaigns', image: '', alt: '', link: '', show_on_home: false, hidden: false };
+  $('dlg-h').textContent = i >= 0 ? 'Edit project' : 'Add project';
+  $('p-title').value = p.title;
+  $('p-category').value = p.category;
+  $('p-alt').value = p.alt || '';
+  $('p-link').value = p.link || '';
+  $('p-home').checked = !!p.show_on_home;
+  $('p-hidden').checked = !!p.hidden;
+  $('p-file').value = '';
+  $('p-error').textContent = '';
+  const pv = $('p-preview');
+  pv.hidden = !p.image;
+  if (p.image) pv.src = viewSrc(p.image);
+  $('project-dialog').showModal();
+  $('p-title').focus();
+}
+$('add-project').addEventListener('click', () => openProject(-1));
+$('p-cancel').addEventListener('click', () => $('project-dialog').close());
+
+$('p-file').addEventListener('change', async () => {
+  const f = $('p-file').files[0];
+  $('p-error').textContent = '';
+  if (!f) return;
+  try {
+    pendingProjectFile = await prepareImage(f);
+    const pv = $('p-preview');
+    pv.src = URL.createObjectURL(pendingProjectFile.blob);
+    pv.hidden = false;
+    if (!$('p-alt').value) $('p-alt').value = $('p-title').value;
+  } catch (err) { pendingProjectFile = null; $('p-file').value = ''; $('p-error').textContent = err.message; }
+});
+
+$('project-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const err = $('p-error');
+  err.textContent = '';
+  const title = $('p-title').value.trim();
+  const link = $('p-link').value.trim();
+  const existing = editIndex >= 0 ? state.portfolio[editIndex] : null;
+  if (!title) { err.textContent = 'Please enter a project title.'; $('p-title').focus(); return; }
+  if (!pendingProjectFile && !existing?.image) { err.textContent = 'Please choose an image.'; $('p-file').focus(); return; }
+  if (link && !/^https:\/\//i.test(link)) { err.textContent = 'The link must start with https://'; $('p-link').focus(); return; }
+  const homeCount = state.portfolio.filter((p, i) => p.show_on_home && i !== editIndex).length;
+  const btn = $('p-save');
+  busy(btn, true);
+  try {
+    let image = existing?.image || '';
+    if (pendingProjectFile) { btn.textContent = 'Uploading image…'; image = await uploadImage(pendingProjectFile.blob, pendingProjectFile.name); }
+    const item = {
+      title, category: $('p-category').value, image,
+      alt: $('p-alt').value.trim() || title, link,
+      show_on_home: $('p-home').checked, hidden: $('p-hidden').checked,
+    };
+    const items = state.portfolio.slice();
+    if (editIndex >= 0) items[editIndex] = item; else items.unshift(item);
+    await savePortfolio(items, editIndex >= 0 ? 'Project updated.' : 'Project added.');
+    $('project-dialog').close();
+    if (item.show_on_home && homeCount >= 4) toast('Saved. Note: only the first four “Home page” projects are shown on the Home page.');
+  } catch (ex) { err.textContent = ex.message; }
+  finally { busy(btn, false); }
+});
+
+/* ---------------- founder ---------------- */
+function renderFounder() {
+  const f = state.founder;
+  $('founder-name').value = f.name || '';
+  $('founder-alt').value = f.alt || '';
+  const has = !!f.photo;
+  $('founder-img').hidden = !has;
+  $('founder-placeholder').hidden = has;
+  if (has) { $('founder-img').src = viewSrc(f.photo); $('founder-img').alt = f.alt || f.name; }
+  $('founder-caption').textContent = has ? 'Current photo' : 'No photo yet. The logo mark is shown instead.';
+  $('founder-remove').hidden = !has;
+  $('founder-file').value = '';
+  pendingFounderFile = null;
+}
+$('founder-file').addEventListener('change', async () => {
+  const f = $('founder-file').files[0];
+  if (!f) return;
+  try {
+    pendingFounderFile = await prepareImage(f);
+    $('founder-img').src = URL.createObjectURL(pendingFounderFile.blob);
+    $('founder-img').hidden = false;
+    $('founder-placeholder').hidden = true;
+    $('founder-caption').textContent = 'New photo, not saved yet. Click Save.';
+  } catch (err) { pendingFounderFile = null; $('founder-file').value = ''; toast(err.message, true); }
+});
+async function saveFounder(photoOverride) {
+  const name = $('founder-name').value.trim();
+  if (!name) { toast('Please enter a name.', true); $('founder-name').focus(); return; }
+  let photo = photoOverride !== undefined ? photoOverride : state.founder.photo;
+  if (photoOverride === undefined && pendingFounderFile) photo = await uploadImage(pendingFounderFile.blob, pendingFounderFile.name);
+  const data = await putJSON('founder', { founder: { name, photo, alt: $('founder-alt').value.trim() || name } });
+  state = data.content;
+  renderFounder();
+}
+$('founder-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $('founder-form').querySelector('button[type=submit]');
+  busy(btn, true);
+  try { await saveFounder(); toast('Founder photo saved. It is live on the About page now.'); }
+  catch (err) { toast(err.message, true); }
+  finally { busy(btn, false); }
+});
+$('founder-remove').addEventListener('click', async () => {
+  const btn = $('founder-remove');
+  busy(btn, true, 'Removing…');
+  try { await saveFounder(''); toast('Photo removed. The logo mark is shown instead.'); }
+  catch (err) { toast(err.message, true); }
+  finally { busy(btn, false); }
+});
+
+/* ---------------- tabs ---------------- */
+const tabs = [['tab-portfolio', 'panel-portfolio'], ['tab-founder', 'panel-founder']];
+function selectTab(id) {
+  tabs.forEach(([t, p]) => {
+    const on = t === id;
+    $(t).setAttribute('aria-selected', String(on));
+    $(t).tabIndex = on ? 0 : -1;
+    $(p).hidden = !on;
+  });
+}
+tabs.forEach(([t], idx) => {
+  $(t).addEventListener('click', () => selectTab(t));
+  $(t).addEventListener('keydown', (e) => {
+    if (e.key !== 'ArrowRight' && e.key !== 'ArrowLeft') return;
+    const next = tabs[(idx + (e.key === 'ArrowRight' ? 1 : tabs.length - 1)) % tabs.length][0];
+    selectTab(next); $(next).focus();
+  });
+});
+
+/* ---------------- sign in ---------------- */
+async function enterApp() {
+  $('toast').className = 'toast';
+  const data = await api('content');
+  state = { portfolio: data.portfolio, founder: data.founder };
+  $('user-email').textContent = data.user?.name || '';
+  $('bar-user').hidden = false;
+  renderProjects();
+  renderFounder();
+  show('app');
+}
+function showLogin() {
+  $('bar-user').hidden = true;
+  show('auth');
+  $('login-user').focus();
+}
+
+$('login-form').addEventListener('submit', async (e) => {
+  e.preventDefault();
+  const btn = e.submitter || $('login-form').querySelector('button[type=submit]');
+  const err = $('login-error');
+  err.textContent = '';
+  const username = $('login-user').value.trim(), password = $('login-password').value;
+  if (!username || !password) { err.textContent = 'Please enter your username and password.'; return; }
+  busy(btn, true, 'Signing in…');
+  try {
+    const res = await fetch('/api/admin/login', {
+      method: 'POST', credentials: 'same-origin',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const data = await res.json().catch(() => ({}));
+    if (!res.ok) throw new Error(data.error || 'Sign-in failed.');
+    $('login-password').value = '';
+    await enterApp();
+  } catch (ex) { err.textContent = ex.message; $('login-password').select(); }
+  finally { busy(btn, false); }
+});
+
+$('logout').addEventListener('click', async () => {
+  try { await fetch('/api/admin/logout', { method: 'POST', credentials: 'same-origin' }); } catch { /* ignore */ }
+  state = { portfolio: [], founder: {} };
+  showLogin();
+});
+
+(async function start() {
+  try { await enterApp(); } catch { showLogin(); }
+})();
+})();

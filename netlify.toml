@@ -1,11 +1,11 @@
 # Netlify configuration — the repository root is the GitHub repo; only the
 # /site folder is published, so /tools, /content and /docs are never served.
-# The build renders the pages and bundles the Website Manager (/admin).
+# The build renders the pages from tools/pages + content/.
 [build]
   publish = "site"
   command = "npm run build"
 
-# Website Manager API: Netlify Functions + Netlify Blobs + Netlify Identity
+# Website Manager API: Netlify Functions + Netlify Blobs (no other setup needed)
 [functions]
   directory = "netlify/functions"
   node_bundler = "esbuild"

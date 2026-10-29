@@ -450,3 +450,4 @@ h1 em,h2 em{color:inherit;background:none;padding:0;}
 @media(max-width:600px){
   .hero-h1,.page-title,.contact-h1{font-size:2.4rem;}
 }
+.cr{cursor:default;-webkit-user-select:none;user-select:none;-webkit-tap-highlight-color:transparent;}
