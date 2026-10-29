@@ -1,0 +1,100 @@
+<div class="contact-hero">
+  <div class="ch-glow" aria-hidden="true"></div>
+
+  <section class="ch-left" aria-labelledby="ch1">
+    <span class="rule" data-hero-rule aria-hidden="true"></span>
+    <p class="eyebrow">Contact</p>
+    <h1 class="contact-h1" id="ch1" data-hero-title>Let's work<br/><em>together.</em></h1>
+    <p class="contact-sub" data-hero-fade>Need ongoing marketing support or help with a particular project? Tell us what you have in mind.</p>
+
+    <ul class="cdet">
+      <li class="cd">
+        <span class="cd-icon" aria-hidden="true">&#9993;</span>
+        <div><p class="cd-label">Email</p><p class="cd-value"><a href="mailto:stephne@alongside.co.za">stephne@alongside.co.za</a></p></div>
+      </li>
+      <li class="cd">
+        <span class="cd-icon" aria-hidden="true">&#9742;</span>
+        <div><p class="cd-label">Phone</p><p class="cd-value"><a href="tel:+27845879933">084&nbsp;587&nbsp;9933</a></p></div>
+      </li>
+      <li class="cd">
+        <span class="cd-icon" aria-hidden="true">&#9998;</span>
+        <div><p class="cd-label">WhatsApp</p><p class="cd-value"><a href="https://wa.me/27845879933" target="_blank" rel="noopener noreferrer">Chat with us<span class="visually-hidden"> on WhatsApp (opens in a new tab)</span></a></p></div>
+      </li>
+      <li class="cd">
+        <span class="cd-icon" aria-hidden="true">&#9906;</span>
+        <div><p class="cd-label">Location</p><p class="cd-value">Pretoria, South Africa</p></div>
+      </li>
+    </ul>
+
+    <nav class="quick-links" aria-labelledby="ql-label">
+      <p class="ql-label" id="ql-label">Explore the site</p>
+      <ul class="ql-grid">
+        <li><a href="about.html" class="ql-link"><span class="ql-arrow" aria-hidden="true">&#8594;</span> Meet Stephné du Toit</a></li>
+        <li><a href="services.html" class="ql-link"><span class="ql-arrow" aria-hidden="true">&#8594;</span> Our 6 core services</a></li>
+        <li><a href="portfolio.html" class="ql-link"><span class="ql-arrow" aria-hidden="true">&#8594;</span> Selected portfolio work</a></li>
+      </ul>
+    </nav>
+  </section>
+
+  <section class="ch-right" aria-labelledby="form-h">
+    <h2 class="form-h" id="form-h">Send us a message</h2>
+    <p class="form-sub">Send a message and we'll be in touch. Fields marked <span aria-hidden="true">*</span><span class="visually-hidden">with an asterisk</span> are required.</p>
+
+    <!-- Netlify Forms: the form is detected at deploy time. "action" is the
+         success page used when JavaScript is unavailable. -->
+    <form class="cf" id="cform" name="contact" method="POST" action="/thanks.html" data-netlify="true" netlify-honeypot="bot-field" novalidate>
+      <input type="hidden" name="form-name" value="contact"/>
+      <p class="hp-field" aria-hidden="true">
+        <label>Leave this field empty <input type="text" name="bot-field" tabindex="-1" autocomplete="off"/></label>
+      </p>
+
+      <div class="fg-row">
+        <div class="fg">
+          <label class="flbl" for="f-name">Your name <span class="req" aria-hidden="true">*</span></label>
+          <input type="text" class="fi" id="f-name" name="name" required maxlength="120" autocomplete="name" aria-describedby="f-name-err"/>
+          <span class="field-err" id="f-name-err"></span>
+        </div>
+        <div class="fg">
+          <label class="flbl" for="f-org">Organisation</label>
+          <input type="text" class="fi" id="f-org" name="organisation" maxlength="160" autocomplete="organization"/>
+        </div>
+      </div>
+      <div class="fg-row">
+        <div class="fg">
+          <label class="flbl" for="f-email">Email address <span class="req" aria-hidden="true">*</span></label>
+          <input type="email" class="fi" id="f-email" name="email" required maxlength="254" autocomplete="email" inputmode="email" aria-describedby="f-email-err"/>
+          <span class="field-err" id="f-email-err"></span>
+        </div>
+        <div class="fg">
+          <label class="flbl" for="f-phone">Phone number</label>
+          <input type="tel" class="fi" id="f-phone" name="phone" maxlength="30" autocomplete="tel" inputmode="tel"/>
+        </div>
+      </div>
+
+      <fieldset class="fg">
+        <legend class="flbl">Services you're interested in</legend>
+        <div class="service-checks">
+          <label class="sc-item"><input type="checkbox" name="services[]" value="Marketing management"/> Marketing management</label>
+          <label class="sc-item"><input type="checkbox" name="services[]" value="Strategic communications"/> Strategic communications</label>
+          <label class="sc-item"><input type="checkbox" name="services[]" value="Campaigns, content &amp; PR"/> Campaigns, content &amp; PR</label>
+          <label class="sc-item"><input type="checkbox" name="services[]" value="Branding &amp; design"/> Branding &amp; design</label>
+          <label class="sc-item"><input type="checkbox" name="services[]" value="Digital &amp; websites"/> Digital &amp; websites</label>
+          <label class="sc-item"><input type="checkbox" name="services[]" value="Events &amp; webinars"/> Events &amp; webinars</label>
+        </div>
+      </fieldset>
+
+      <div class="fg">
+        <label class="flbl" for="f-msg">What are you working on? <span class="req" aria-hidden="true">*</span></label>
+        <textarea class="fta" id="f-msg" name="message" required maxlength="5000" aria-describedby="f-msg-err"></textarea>
+        <span class="field-err" id="f-msg-err"></span>
+      </div>
+
+      <p class="privacy-line">We use the information you share to respond to your enquiry. Read our <a href="privacy.html">Privacy Notice</a>.</p>
+
+      <div>
+        <button type="submit" class="btn-fill" id="fsub">Send message <span class="btn-icon" aria-hidden="true">&#8594;</span></button>
+      </div>
+      <div class="form-status" id="form-status" role="status" aria-live="polite" tabindex="-1" hidden></div>
+    </form>
+  </section>
+</div>

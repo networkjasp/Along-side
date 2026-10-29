@@ -1,0 +1,854 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1.0"/>
+<meta name="robots" content="noindex,nofollow"/>
+<meta name="theme-color" content="#F5F0E8"/>
+<title>Portfolio Manager (local tool) — Alongside</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'><rect width='32' height='32' rx='4' fill='%23F5F0E8'/><text x='16' y='22' font-family='Georgia,serif' font-size='18' fill='%231E9E74' text-anchor='middle' font-style='italic'>A</text></svg>"/>
+<link rel="preconnect" href="https://fonts.googleapis.com"/>
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin/>
+<link href="https://fonts.googleapis.com/css2?family=Cormorant+Garamond:ital,wght@0,300;0,400;1,300&family=Outfit:wght@300;400;500&display=swap" rel="stylesheet"/>
+<style>
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0;}
+:root{
+  --bg:#F5F0E8;--bg2:#EDE8DF;--bg3:#E4DDD2;
+  --ink:#1C1C1A;--ink2:rgba(28,28,26,.55);--ink3:rgba(28,28,26,.28);
+  --mint:#1E9E74;--mint-hi:#2CB88A;--mint-pale:rgba(30,158,116,.1);
+  --red:#C0392B;--red-pale:rgba(192,57,43,.08);
+  --border:rgba(28,28,26,.12);--border-focus:rgba(30,158,116,.5);
+  --shadow:0 2px 16px rgba(28,28,26,.08);
+  --shadow-lg:0 8px 40px rgba(28,28,26,.14);
+  --fd:'Cormorant Garamond',Georgia,serif;
+  --fb:'Outfit',sans-serif;
+  --radius:8px;--radius-sm:5px;
+}
+html{font-size:16px;}
+body{background:var(--bg);color:var(--ink);font-family:var(--fb);font-weight:300;min-height:100vh;-webkit-font-smoothing:antialiased;}
+
+/* ── LOGIN SCREEN ── */
+#login-screen{
+  position:fixed;inset:0;z-index:9000;
+  background:var(--bg);
+  display:flex;align-items:center;justify-content:center;
+  flex-direction:column;gap:0;
+}
+.login-card{
+  background:white;border-radius:12px;
+  padding:2.8rem 2.8rem 2.4rem;
+  box-shadow:var(--shadow-lg);
+  width:100%;max-width:380px;
+}
+.login-logo{
+  font-family:var(--fd);font-size:1.6rem;font-weight:300;
+  letter-spacing:.06em;margin-bottom:.3rem;color:var(--ink);
+}
+.login-sub{font-size:.78rem;color:var(--ink2);margin-bottom:2rem;}
+.login-label{font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;color:var(--ink2);display:block;margin-bottom:.4rem;}
+.login-input{
+  width:100%;font-family:var(--fb);font-size:.92rem;font-weight:300;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:.75rem 1rem;color:var(--ink);outline:none;
+  transition:border-color .25s;
+}
+.login-input:focus{border-color:var(--border-focus);}
+.login-btn{
+  width:100%;margin-top:1.2rem;
+  font-family:var(--fb);font-size:.78rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--mint);color:white;border:none;border-radius:100px;
+  padding:.85rem;cursor:pointer;
+  transition:background .25s,transform .2s;
+}
+.login-btn:hover{background:var(--mint-hi);transform:scale(1.02);}
+.login-btn:active{transform:scale(.98);}
+.login-err{
+  font-size:.78rem;color:var(--red);margin-top:.8rem;
+  display:none;text-align:center;
+}
+.login-hint{font-size:.68rem;color:var(--ink3);text-align:center;margin-top:1rem;}
+.login-back{font-size:.68rem;color:var(--ink3);text-align:center;margin-top:.6rem;}
+.login-back a{color:var(--ink2);text-decoration:none;transition:color .2s;}
+.login-back a:hover{color:var(--mint);}
+
+/* ── MANAGER APP ── */
+#app{display:block;}
+button.port-vis{border:none;background:transparent;font:inherit;cursor:pointer;}
+.local-note{max-width:1300px;margin:1rem auto 0;padding:.8rem 1.2rem;border:1px solid rgba(30,158,116,.3);border-radius:6px;background:rgba(30,158,116,.06);font-size:.8rem;line-height:1.6;}
+
+/* TOP BAR */
+.topbar{
+  position:sticky;top:0;z-index:100;
+  background:rgba(245,240,232,.92);
+  backdrop-filter:blur(18px);
+  -webkit-backdrop-filter:blur(18px);
+  border-bottom:1px solid var(--border);
+  padding:0 2rem;
+  display:flex;align-items:center;justify-content:space-between;
+  height:58px;
+}
+.tb-logo{font-family:var(--fd);font-size:1.1rem;font-weight:300;letter-spacing:.06em;color:var(--ink);}
+.tb-logo span{font-size:.65rem;letter-spacing:.14em;text-transform:uppercase;color:var(--mint);margin-left:.6rem;font-family:var(--fb);font-weight:500;}
+.tb-actions{display:flex;align-items:center;gap:.8rem;}
+.tb-link{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink2);text-decoration:none;transition:color .2s;
+}
+.tb-link:hover{color:var(--mint);}
+.tb-logout{
+  font-size:.68rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--ink3);background:none;border:none;cursor:pointer;
+  font-family:var(--fb);transition:color .2s;padding:0;
+}
+.tb-logout:hover{color:var(--red);}
+
+/* MAIN LAYOUT */
+.manager{display:grid;grid-template-columns:1fr 360px;gap:2rem;padding:2rem;max-width:1300px;margin:0 auto;}
+
+/* PANEL */
+.panel{background:white;border-radius:var(--radius);box-shadow:var(--shadow);}
+.panel-head{
+  padding:1.4rem 1.6rem;border-bottom:1px solid var(--border);
+  display:flex;align-items:center;justify-content:space-between;
+}
+.panel-title{font-family:var(--fd);font-size:1.2rem;font-weight:400;letter-spacing:-.01em;}
+.panel-count{font-size:.7rem;letter-spacing:.1em;text-transform:uppercase;color:var(--mint);font-weight:500;font-family:var(--fb);}
+.panel-body{padding:1.4rem 1.6rem;}
+
+/* PORTFOLIO LIST */
+.port-list{display:flex;flex-direction:column;gap:.6rem;min-height:120px;}
+.port-item{
+  display:grid;
+  grid-template-columns:32px 64px 1fr auto auto auto;
+  align-items:center;gap:.9rem;
+  padding:.9rem 1rem;
+  background:var(--bg);
+  border:1px solid var(--border);
+  border-radius:var(--radius-sm);
+  transition:box-shadow .2s,border-color .2s;
+}
+.port-item:hover{box-shadow:0 2px 12px rgba(28,28,26,.08);border-color:rgba(28,28,26,.2);}
+.port-item.dragging{opacity:.45;box-shadow:var(--shadow-lg);}
+.drag-handle{
+  color:var(--ink3);cursor:grab;display:flex;align-items:center;
+  flex-direction:column;gap:2px;padding:4px 6px;
+}
+.drag-handle:active{cursor:grabbing;}
+.drag-handle span{display:block;width:14px;height:1px;background:currentColor;border-radius:1px;}
+.port-thumb{
+  width:64px;height:40px;object-fit:cover;
+  border-radius:3px;border:1px solid var(--border);
+  background:var(--bg2);flex-shrink:0;
+}
+.port-thumb-placeholder{
+  width:64px;height:40px;border-radius:3px;
+  border:1px dashed var(--border);background:var(--bg2);
+  display:flex;align-items:center;justify-content:center;
+  font-size:.6rem;color:var(--ink3);flex-shrink:0;text-align:center;
+  line-height:1.2;
+}
+.port-info{min-width:0;}
+.port-name{
+  font-size:.9rem;font-weight:400;color:var(--ink);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;
+  margin-bottom:.15rem;
+}
+.port-meta{display:flex;align-items:center;gap:.6rem;flex-wrap:wrap;}
+.port-cat{
+  font-size:.6rem;letter-spacing:.1em;text-transform:uppercase;
+  color:var(--mint);font-weight:500;font-family:var(--fb);
+  background:var(--mint-pale);padding:.15rem .5rem;border-radius:100px;
+}
+.port-link-pill{
+  font-size:.62rem;color:var(--ink2);
+  white-space:nowrap;overflow:hidden;text-overflow:ellipsis;max-width:160px;
+}
+.port-link-pill a{color:var(--mint);text-decoration:none;}
+.port-link-pill a:hover{text-decoration:underline;}
+.port-vis{
+  display:flex;align-items:center;justify-content:center;
+  width:26px;height:26px;border-radius:100px;
+  border:1px solid var(--border);cursor:pointer;
+  transition:all .2s;font-size:.7rem;
+  flex-shrink:0;
+}
+.port-vis.shown{background:var(--mint-pale);border-color:rgba(30,158,116,.3);color:var(--mint);}
+.port-vis.hidden{background:transparent;color:var(--ink3);}
+.port-vis:hover{border-color:var(--mint);color:var(--mint);}
+.icon-btn{
+  width:28px;height:28px;border-radius:100px;border:1px solid var(--border);
+  background:transparent;cursor:pointer;
+  display:flex;align-items:center;justify-content:center;
+  font-size:.75rem;color:var(--ink2);
+  transition:all .2s;flex-shrink:0;
+  font-family:var(--fb);
+}
+.icon-btn.edit:hover{border-color:var(--mint);color:var(--mint);background:var(--mint-pale);}
+.icon-btn.del:hover{border-color:var(--red);color:var(--red);background:var(--red-pale);}
+
+/* EMPTY STATE */
+.empty-state{
+  text-align:center;padding:3rem 2rem;
+  border:2px dashed var(--border);border-radius:var(--radius-sm);
+}
+.empty-state-icon{font-size:2rem;margin-bottom:.8rem;opacity:.35;}
+.empty-state-text{font-size:.88rem;color:var(--ink2);}
+
+/* ADD / EDIT FORM PANEL */
+.form-panel{}
+.form-section{margin-bottom:1.4rem;}
+.form-label{
+  font-size:.65rem;letter-spacing:.12em;text-transform:uppercase;
+  color:var(--ink2);display:block;margin-bottom:.4rem;font-family:var(--fb);
+}
+.form-label .req{color:var(--mint);}
+.form-input,.form-select,.form-textarea{
+  width:100%;font-family:var(--fb);font-size:.88rem;font-weight:300;
+  background:var(--bg);border:1px solid var(--border);border-radius:var(--radius-sm);
+  padding:.65rem .9rem;color:var(--ink);outline:none;
+  transition:border-color .25s;
+}
+.form-input:focus,.form-select:focus,.form-textarea:focus{border-color:var(--border-focus);background:white;}
+.form-textarea{resize:vertical;min-height:72px;}
+.form-select{appearance:none;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%231C1C1A' opacity='.4'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right .8rem center;padding-right:2rem;}
+.form-hint{font-size:.72rem;color:var(--ink3);margin-top:.35rem;line-height:1.5;}
+
+/* Image preview */
+.img-preview{
+  width:100%;height:120px;border-radius:var(--radius-sm);
+  border:1px solid var(--border);background:var(--bg2);
+  object-fit:cover;display:none;margin-bottom:.6rem;
+}
+.img-preview.show{display:block;}
+
+/* Toggle */
+.toggle-row{display:flex;align-items:center;justify-content:space-between;padding:.6rem 0;}
+.toggle-label{font-size:.85rem;color:var(--ink);}
+.toggle{
+  position:relative;width:40px;height:22px;
+  background:var(--border);border-radius:100px;
+  cursor:pointer;transition:background .25s;flex-shrink:0;
+}
+.toggle::after{
+  content:'';position:absolute;top:3px;left:3px;
+  width:16px;height:16px;border-radius:50%;background:white;
+  transition:transform .25s;box-shadow:0 1px 3px rgba(0,0,0,.15);
+}
+.toggle.on{background:var(--mint);}
+.toggle.on::after{transform:translateX(18px);}
+
+/* SUBMIT BTN */
+.form-submit-row{display:flex;gap:.7rem;margin-top:1.6rem;}
+.btn-primary{
+  flex:1;font-family:var(--fb);font-size:.75rem;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;
+  background:var(--mint);color:white;border:none;
+  border-radius:100px;padding:.82rem 1.2rem;cursor:pointer;
+  transition:background .25s,transform .2s;
+}
+.btn-primary:hover{background:var(--mint-hi);transform:scale(1.02);}
+.btn-primary:active{transform:scale(.98);}
+.btn-secondary{
+  font-family:var(--fb);font-size:.75rem;font-weight:400;
+  letter-spacing:.1em;text-transform:uppercase;
+  background:transparent;color:var(--ink2);
+  border:1px solid var(--border);border-radius:100px;
+  padding:.82rem 1.2rem;cursor:pointer;
+  transition:border-color .25s,color .25s;
+}
+.btn-secondary:hover{border-color:var(--ink2);color:var(--ink);}
+
+/* STATS BAR */
+.stats-bar{
+  display:grid;grid-template-columns:repeat(4,1fr);gap:1rem;
+  margin-bottom:2rem;
+}
+.stat-card{
+  background:white;border-radius:var(--radius);
+  box-shadow:var(--shadow);padding:1.1rem 1.3rem;
+}
+.stat-card-n{
+  font-family:var(--fd);font-size:2rem;font-weight:300;
+  color:var(--mint);line-height:1;margin-bottom:.2rem;
+}
+.stat-card-l{font-size:.65rem;letter-spacing:.1em;text-transform:uppercase;color:var(--ink2);}
+
+/* TOAST */
+#toast{
+  position:fixed;bottom:2rem;left:50%;transform:translateX(-50%) translateY(80px);
+  z-index:9999;background:var(--ink);color:white;
+  font-size:.8rem;padding:.7rem 1.4rem;border-radius:100px;
+  opacity:0;transition:all .35s cubic-bezier(.34,1.56,.64,1);
+  white-space:nowrap;pointer-events:none;font-family:var(--fb);
+}
+#toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+#toast.success{background:var(--mint);}
+#toast.error{background:var(--red);}
+
+/* MODAL (delete confirm) */
+#modal-backdrop{
+  position:fixed;inset:0;z-index:8000;
+  background:rgba(245,240,232,.8);backdrop-filter:blur(8px);
+  display:none;align-items:center;justify-content:center;
+}
+#modal-backdrop.open{display:flex;}
+.modal{
+  background:white;border-radius:var(--radius);
+  box-shadow:var(--shadow-lg);padding:2rem;
+  width:100%;max-width:360px;text-align:center;
+}
+.modal-icon{font-size:2.2rem;margin-bottom:.8rem;}
+.modal-title{font-family:var(--fd);font-size:1.3rem;font-weight:400;margin-bottom:.5rem;}
+.modal-body{font-size:.85rem;color:var(--ink2);margin-bottom:1.6rem;line-height:1.6;}
+.modal-actions{display:flex;gap:.7rem;justify-content:center;}
+.btn-danger{
+  font-family:var(--fb);font-size:.75rem;font-weight:500;letter-spacing:.1em;text-transform:uppercase;
+  background:var(--red);color:white;border:none;border-radius:100px;
+  padding:.75rem 1.4rem;cursor:pointer;transition:opacity .2s;
+}
+.btn-danger:hover{opacity:.88;}
+
+/* EXPORT SECTION */
+.export-box{
+  background:var(--bg);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:1rem;
+  font-size:.75rem;color:var(--ink2);line-height:1.6;
+  margin-bottom:1rem;
+}
+.export-code{
+  font-family:monospace;font-size:.72rem;
+  background:var(--bg2);border:1px solid var(--border);
+  border-radius:var(--radius-sm);padding:.8rem;
+  max-height:140px;overflow-y:auto;white-space:pre-wrap;
+  word-break:break-all;color:var(--ink);margin:0;
+  line-height:1.5;
+}
+.copy-code-btn{
+  font-family:var(--fb);font-size:.65rem;font-weight:500;
+  letter-spacing:.1em;text-transform:uppercase;
+  background:var(--bg2);color:var(--ink2);border:1px solid var(--border);
+  border-radius:100px;padding:.45rem .9rem;cursor:pointer;
+  transition:all .2s;display:block;width:100%;margin-top:.6rem;
+}
+.copy-code-btn:hover{background:var(--mint-pale);color:var(--mint);border-color:rgba(30,158,116,.3);}
+
+/* DRAG OVER */
+.port-item.drag-over{
+  border-color:var(--mint);
+  background:var(--mint-pale);
+}
+
+@media(max-width:900px){
+  .manager{grid-template-columns:1fr;}
+  .stats-bar{grid-template-columns:1fr 1fr;}
+}
+@media(max-width:500px){
+  .topbar{padding:0 1rem;}
+  .manager{padding:1rem;}
+  .stats-bar{grid-template-columns:1fr 1fr;}
+  .port-item{grid-template-columns:24px 48px 1fr auto auto;}
+}
+
+@media(max-width:768px){.manager{grid-template-columns:1fr;padding:1rem;}.stats-bar{grid-template-columns:1fr 1fr;}.port-item{grid-template-columns:24px 48px 1fr auto auto;}.topbar{padding:0 1rem;}}
+</style>
+</head>
+<body>
+
+</div>
+
+<!-- TOAST -->
+<div id="toast" role="status" aria-live="polite"></div>
+
+<!-- DELETE MODAL -->
+<div id="modal-backdrop">
+  <div class="modal">
+    <div class="modal-icon">🗑️</div>
+    <div class="modal-title">Remove this item?</div>
+    <div class="modal-body" id="modal-body">This will remove the portfolio item permanently.</div>
+    <div class="modal-actions">
+      <button class="btn-secondary" id="modal-cancel" type="button">Cancel</button>
+      <button class="btn-danger" id="modal-confirm">Remove</button>
+    </div>
+  </div>
+</div>
+
+<!-- APP -->
+<div id="app">
+  <p class="local-note"><strong>Local tool — not part of the website.</strong> Open this file directly on your computer. It is never deployed (Netlify publishes only the <code>site/</code> folder), so it needs no password. Changes are stored only in this browser; to publish them, copy the export code into <code>tools/pages/portfolio.html</code>, run <code>python3 tools/build_pages.py</code>, then commit and push to GitHub.</p>
+  <nav class="topbar" aria-label="Manager navigation" role="navigation">
+    <div class="tb-logo"><h1 style="display:inline;font-family:var(--fd);font-size:1.1rem;font-weight:300;letter-spacing:.06em;">Alongside</h1> <span>Portfolio Manager</span></div>
+    <div class="tb-actions">
+      <a href="../site/portfolio.html" class="tb-link" target="_blank" rel="noopener noreferrer">&#8599; View portfolio</a>
+      
+    </div>
+  </nav>
+
+  <div style="padding:1.5rem 2rem 0;max-width:1300px;margin:0 auto;">
+    <div class="stats-bar" id="stats-bar" role="region" aria-label="Portfolio statistics">
+      <div class="stat-card"><div class="stat-card-n" id="stat-total">0</div><div class="stat-card-l">Total items</div></div>
+      <div class="stat-card"><div class="stat-card-n" id="stat-visible">0</div><div class="stat-card-l">Visible</div></div>
+      <div class="stat-card"><div class="stat-card-n" id="stat-linked">0</div><div class="stat-card-l">With links</div></div>
+      <div class="stat-card"><div class="stat-card-n" id="stat-cats">0</div><div class="stat-card-l">Categories</div></div>
+    </div>
+  </div>
+
+  <div class="manager">
+
+    <!-- LEFT: ITEMS LIST -->
+    <div>
+      <div class="panel">
+        <div class="panel-head">
+          <div class="panel-title">Portfolio items</div>
+          <div class="panel-count" id="list-count">0 items</div>
+        </div>
+        <div class="panel-body">
+          <div class="port-list" id="port-list" role="list" aria-label="Portfolio items"></div>
+        </div>
+      </div>
+
+      <!-- EXPORT PANEL -->
+      <div class="panel" style="margin-top:1.5rem;">
+        <div class="panel-head">
+          <div class="panel-title">Export to portfolio page</div>
+        </div>
+        <div class="panel-body">
+          <div class="export-box">
+            The code below replaces the <code>#port-grid</code> section in <strong>portfolio.html</strong>. Copy it and paste it between the <code>&lt;div class="port-grid" id="port-grid"&gt;</code> and closing <code>&lt;/div&gt;</code> tags.
+          </div>
+          <pre class="export-code" id="export-code"></pre>
+          <button class="copy-code-btn" id="copy-export" type="button">&#10010; Copy export code</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- RIGHT: ADD / EDIT FORM -->
+    <div>
+      <div class="panel form-panel" id="form-panel">
+        <div class="panel-head">
+          <div class="panel-title" id="form-title">Add new item</div>
+        </div>
+        <div class="panel-body">
+
+          <div class="form-section">
+            <label class="form-label" for="f-title">Project title <span class="req">*</span></label>
+            <input type="text" class="form-input" id="f-title" placeholder="e.g. Brand campaign for Duvenhage Wines"/>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-cat">Category <span class="req">*</span></label>
+            <select class="form-select" id="f-cat">
+              <option value="campaigns">Campaigns</option>
+              <option value="branding">Branding</option>
+              <option value="communications">Communications</option>
+              <option value="digital">Digital</option>
+            </select>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-img">Image URL</label>
+            <input type="url" class="form-input" id="f-img" placeholder="https://example.com/image.jpg"/>
+            <div class="form-hint">Paste a direct image URL (JPG, PNG, WebP). Leave blank to use a placeholder.</div>
+            <img class="img-preview" id="img-preview" alt="Image preview"/>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-alt">Image alt text</label>
+            <input type="text" class="form-input" id="f-alt" placeholder="Describe the image for accessibility"/>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-link">External link URL</label>
+            <input type="url" class="form-input" id="f-link" placeholder="https://client-website.co.za"/>
+            <div class="form-hint">Clicking the portfolio item will open this URL in a new tab.</div>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-link-label">Link label</label>
+            <input type="text" class="form-input" id="f-link-label" placeholder="e.g. Visit website"/>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-desc">Short description</label>
+            <textarea class="form-textarea" id="f-desc" placeholder="One or two lines shown on hover overlay…"></textarea>
+          </div>
+
+          <div class="form-section">
+            <label class="form-label" for="f-size">Display size</label>
+            <select class="form-select" id="f-size">
+              <option value="normal">Normal (1 column)</option>
+              <option value="wide">Wide (2 columns)</option>
+            </select>
+          </div>
+
+          <div class="form-section">
+            <div class="toggle-row">
+              <span class="toggle-label">Visible on portfolio page</span>
+              <div class="toggle on" id="f-visible" role="switch" aria-checked="true" aria-label="Visible on portfolio page" tabindex="0"></div>
+            </div>
+          </div>
+
+          <div class="form-submit-row">
+            <button class="btn-primary" id="form-submit" type="button">Add to portfolio</button>
+            <button class="btn-secondary" id="form-cancel" type="button" hidden>Cancel edit</button>
+          </div>
+
+        </div>
+      </div>
+    </div>
+
+  </div>
+</div>
+
+<script>
+(function(){
+'use strict';
+
+/* ── CONFIG ── */
+var STORAGE_KEY = 'alongside_portfolio_v2'; /* v2: new categories */
+
+/* ── CATEGORIES ── */
+var CAT_LABELS = {
+  campaigns: 'Campaigns',
+  branding: 'Branding',
+  communications: 'Communications',
+  digital: 'Digital'
+};
+
+/* ── STATE ── */
+var items = [];
+var editingId = null;
+var deleteTargetId = null;
+var dragSrcIdx = null;
+
+/* ── DEFAULT ITEMS (loaded from existing portfolio) ── */
+var DEFAULT_ITEMS = [
+  {id:'p1',title:'Duvenhage Wines | Social content',cat:'campaigns',img:'https://static.wixstatic.com/media/5005cc_c9d502dfc48d40beb0ac2bbfc361a502~mv2.jpg/v1/fill/w_557,h_314,q_90,enc_avif,quality_auto/5005cc_c9d502dfc48d40beb0ac2bbfc361a502~mv2.jpg',alt:'Duvenhage Wines: Social content',desc:'',link:'',linkLabel:'',size:'wide',visible:true},
+  {id:'p2',title:'Brand identity development',cat:'branding',img:'https://static.wixstatic.com/media/5005cc_abf85a821bc743d088f9e9fb5ef901abf003.jpg/v1/fill/w_559,h_314,q_90,enc_avif,quality_auto/5005cc_abf85a821bc743d088f9e9fb5ef901abf003.jpg',alt:'Brand identity development',desc:'',link:'',linkLabel:'',size:'normal',visible:true},
+  {id:'p3',title:'Professional association newsletter',cat:'communications',img:'https://static.wixstatic.com/media/5005cc_c689ea56f05a433680fc2df5d1e5c880~mv2.jpg/v1/fill/w_721,h_406,q_90,enc_avif,quality_auto/5005cc_c689ea56f05a433680fc2df5d1e5c880~mv2.jpg',alt:'Professional association newsletter',desc:'',link:'',linkLabel:'',size:'normal',visible:true},
+  {id:'p4',title:'Health brand website',cat:'digital',img:'https://static.wixstatic.com/media/5005cc_43b82cb5e23949708e16cca3b7fb8f05f003.jpg/v1/fill/w_719,h_406,q_90,enc_avif,quality_auto/5005cc_43b82cb5e23949708e16cca3b7fb8f05f003.jpg',alt:'Health brand website',desc:'',link:'',linkLabel:'',size:'normal',visible:true},
+  {id:'p5',title:'100% Health | Content campaigns',cat:'campaigns',img:'https://static.wixstatic.com/media/5005cc_3b83f7f0fde7475581dffa6d6618f350~mv2.jpg/v1/fill/w_721,h_406,q_90,enc_avif,quality_auto/5005cc_3b83f7f0fde7475581dffa6d6618f350~mv2.jpg',alt:'100% Health: Content campaigns',desc:'',link:'',linkLabel:'',size:'normal',visible:true},
+  {id:'p6',title:'Integrated campaign visuals',cat:'branding',img:'https://static.wixstatic.com/media/5005cc_57e3c987987e4b5591d8dfeba8bfed6d~mv2.jpg/v1/fill/w_719,h_406,q_90,enc_avif,quality_auto/5005cc_57e3c987987e4b5591d8dfeba8bfed6d~mv2.jpg',alt:'Integrated campaign visuals',desc:'',link:'',linkLabel:'',size:'wide',visible:true},
+  {id:'p7',title:'Corporate communication programme',cat:'communications',img:'https://static.wixstatic.com/media/5005cc_403040f75a1a4d84be2ef92562b8d33df003.jpg/v1/fill/w_721,h_406,q_90,enc_avif,quality_auto/5005cc_403040f75a1a4d84be2ef92562b8d33df003.jpg',alt:'Corporate communication programme',desc:'',link:'',linkLabel:'',size:'wide',visible:true},
+  {id:'p8',title:'Gehoor in die Moot | Website',cat:'digital',img:'https://static.wixstatic.com/media/5005cc_d9cf3edc86f8479a9364484fccf0000a~mv2.jpg/v1/fill/w_719,h_406,q_90,enc_avif,quality_auto/5005cc_d9cf3edc86f8479a9364484fccf0000a~mv2.jpg',alt:'Gehoor in die Moot: Website',desc:'',link:'',linkLabel:'',size:'wide',visible:true}
+];
+
+
+/* ── STORAGE ── */
+function loadItems(){
+  try {
+    var raw = localStorage.getItem(STORAGE_KEY);
+    items = raw ? JSON.parse(raw) : JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+  } catch(e){
+    items = JSON.parse(JSON.stringify(DEFAULT_ITEMS));
+  }
+}
+
+function saveItems(){
+  try { localStorage.setItem(STORAGE_KEY, JSON.stringify(items)); } catch(e){}
+}
+
+/* ── RENDER ── */
+function renderAll(){
+  renderList();
+  renderStats();
+  renderExport();
+}
+
+function renderList(){
+  var list = document.getElementById('port-list');
+  var count = document.getElementById('list-count');
+  count.textContent = items.length + ' item' + (items.length !== 1 ? 's' : '');
+
+  if(!items.length){
+    list.innerHTML = '<div class="empty-state"><div class="empty-state-icon">🖼️</div><div class="empty-state-text">No portfolio items yet.<br>Add your first one using the form.</div></div>';
+    return;
+  }
+
+  list.innerHTML = items.map(function(item, idx){
+    var safeImg = safeUrl(item.img);
+    var thumb = safeImg
+      ? '<img class="port-thumb" src="'+escHtml(safeImg)+'" alt="'+escHtml(item.alt||'')+'" loading="lazy"/>'
+      : '<div class="port-thumb-placeholder">No image</div>';
+    var catLabel = CAT_LABELS[item.cat] || item.cat;
+    var safeLink = safeUrl(item.link);
+    var linkHtml = safeLink
+      ? '<span class="port-link-pill"><a href="'+escHtml(safeLink)+'" target="_blank" rel="noopener noreferrer">&#8599; '+escHtml(item.linkLabel||'Link')+'</a></span>'
+      : '<span class="port-link-pill">No link</span>';
+    var visClass = item.visible ? 'shown' : 'hidden';
+    var visTitle = item.visible ? 'Visible — click to hide' : 'Hidden — click to show';
+    var visIcon = item.visible ? '&#128065;' : '&#128683;';
+    var id = escHtml(item.id);
+    return '<div class="port-item" role="listitem" draggable="true" data-idx="'+idx+'" data-id="'+id+'">'
+      +'<div class="drag-handle" title="Drag to reorder" aria-hidden="true"><span></span><span></span><span></span></div>'
+      +thumb
+      +'<div class="port-info"><div class="port-name">'+escHtml(item.title)+'</div><div class="port-meta"><span class="port-cat">'+escHtml(catLabel)+'</span>'+linkHtml+'</div></div>'
+      +'<button type="button" class="port-vis '+visClass+'" title="'+visTitle+'" aria-label="'+visTitle+'" data-action="toggle" data-id="'+id+'">'+visIcon+'</button>'
+      +'<button type="button" class="icon-btn edit" title="Edit" aria-label="Edit '+escHtml(item.title)+'" data-action="edit" data-id="'+id+'">✏️</button>'
+      +'<button type="button" class="icon-btn del" title="Remove" aria-label="Remove '+escHtml(item.title)+'" data-action="delete" data-id="'+id+'">🗑️</button>'
+      +'</div>';
+  }).join('');
+
+  /* Drag and drop */
+  list.querySelectorAll('.port-item').forEach(function(el){
+    el.addEventListener('dragstart', function(e){
+      dragSrcIdx = parseInt(el.getAttribute('data-idx'));
+      e.dataTransfer.effectAllowed = 'move';
+      setTimeout(function(){ el.classList.add('dragging'); }, 0);
+    });
+    el.addEventListener('dragend', function(){
+      el.classList.remove('dragging');
+      list.querySelectorAll('.port-item').forEach(function(d){ d.classList.remove('drag-over'); });
+    });
+    el.addEventListener('dragover', function(e){
+      e.preventDefault();
+      list.querySelectorAll('.port-item').forEach(function(d){ d.classList.remove('drag-over'); });
+      el.classList.add('drag-over');
+    });
+    el.addEventListener('drop', function(e){
+      e.preventDefault();
+      var targetIdx = parseInt(el.getAttribute('data-idx'));
+      if(dragSrcIdx !== null && dragSrcIdx !== targetIdx){
+        var moved = items.splice(dragSrcIdx, 1)[0];
+        items.splice(targetIdx, 0, moved);
+        saveItems();
+        renderAll();
+        showToast('Order updated', 'success');
+      }
+      dragSrcIdx = null;
+    });
+  });
+}
+
+function renderStats(){
+  var visible = items.filter(function(i){ return i.visible; }).length;
+  var linked  = items.filter(function(i){ return i.link; }).length;
+  var cats    = new Set(items.map(function(i){ return i.cat; })).size; /* was [new Set()].length, always 1 */
+  document.getElementById('stat-total').textContent   = items.length;
+  document.getElementById('stat-visible').textContent = visible;
+  document.getElementById('stat-linked').textContent  = linked;
+  document.getElementById('stat-cats').textContent    = cats;
+}
+
+function renderExport(){
+  var visItems = items.filter(function(i){ return i.visible; });
+  var html = visItems.map(function(item){
+    var img = safeUrl(item.img);
+    var link = safeUrl(item.link);
+    var label = CAT_LABELS[item.cat] || item.cat;
+    var title = escHtml(item.title);
+    if(link){ title = '<a href="'+escHtml(link)+'" target="_blank" rel="noopener noreferrer">'+title+'<span class="visually-hidden"> (opens in a new tab)</span></a>'; }
+    return '<li class="pgc'+(item.size === 'wide' ? ' wide' : '')+' ru" data-cat="'+escHtml(item.cat)+'">\n'
+      +(img ? '      <img src="'+escHtml(img)+'" alt="'+escHtml(item.alt||item.title)+'" loading="lazy" decoding="async"/>\n' : '')
+      +'      <div class="pgc-ov"><p class="pgc-tag">'+escHtml(label)+'</p><h3 class="pgc-title">'+title+'</h3></div>\n'
+      +'    </li>';
+  }).join('\n    ');
+  document.getElementById('export-code').textContent = html || '(no visible items)';
+}
+
+/* ── FORM ── */
+function previewImg(url){
+  var img = document.getElementById('img-preview');
+  if(!url){ img.classList.remove('show'); return; }
+  img.src = url;
+  img.classList.add('show');
+  img.onerror = function(){ img.classList.remove('show'); };
+}
+window.previewImg = previewImg;
+
+function getFormValues(){
+  return {
+    title:      document.getElementById('f-title').value.trim(),
+    cat:        document.getElementById('f-cat').value,
+    img:        document.getElementById('f-img').value.trim(),
+    alt:        document.getElementById('f-alt').value.trim(),
+    link:       document.getElementById('f-link').value.trim(),
+    linkLabel:  document.getElementById('f-link-label').value.trim(),
+    desc:       document.getElementById('f-desc').value.trim(),
+    size:       document.getElementById('f-size').value,
+    visible:    document.getElementById('f-visible').classList.contains('on')
+  };
+}
+
+function setFormValues(item){
+  document.getElementById('f-title').value      = item.title || '';
+  document.getElementById('f-cat').value        = item.cat || 'campaigns';
+  document.getElementById('f-img').value        = item.img || '';
+  document.getElementById('f-alt').value        = item.alt || '';
+  document.getElementById('f-link').value       = item.link || '';
+  document.getElementById('f-link-label').value = item.linkLabel || '';
+  document.getElementById('f-desc').value       = item.desc || '';
+  document.getElementById('f-size').value       = item.size || 'normal';
+  var toggle = document.getElementById('f-visible');
+  if(item.visible){ toggle.classList.add('on'); toggle.setAttribute('aria-checked','true'); }
+  else { toggle.classList.remove('on'); toggle.setAttribute('aria-checked','false'); }
+  previewImg(item.img || '');
+}
+
+function resetForm(){
+  editingId = null;
+  document.getElementById('f-title').value      = '';
+  document.getElementById('f-cat').value        = 'campaigns';
+  document.getElementById('f-img').value        = '';
+  document.getElementById('f-alt').value        = '';
+  document.getElementById('f-link').value       = '';
+  document.getElementById('f-link-label').value = '';
+  document.getElementById('f-desc').value       = '';
+  document.getElementById('f-size').value       = 'normal';
+  document.getElementById('f-visible').classList.add('on');
+  document.getElementById('f-visible').setAttribute('aria-checked','true');
+  document.getElementById('img-preview').classList.remove('show');
+  document.getElementById('form-title').textContent = 'Add new item';
+  document.getElementById('form-submit').textContent = 'Add to portfolio';
+  document.getElementById('form-cancel').hidden = true;
+}
+window.resetForm = resetForm;
+
+function submitForm(){
+  var vals = getFormValues();
+  if(!vals.title){
+    showToast('Please enter a project title', 'error');
+    document.getElementById('f-title').focus();
+    return;
+  }
+  if(vals.img && !safeUrl(vals.img)){ showToast('Image URL must start with https://', 'error'); document.getElementById('f-img').focus(); return; }
+  if(vals.link && !safeUrl(vals.link)){ showToast('Link must start with https://', 'error'); document.getElementById('f-link').focus(); return; }
+  if(editingId){
+    var idx = items.findIndex(function(i){ return i.id === editingId; });
+    if(idx > -1){ Object.assign(items[idx], vals); }
+    showToast('Item updated ✓', 'success');
+  } else {
+    items.push(Object.assign({ id: 'p'+Date.now() }, vals));
+    showToast('Item added ✓', 'success');
+  }
+  saveItems();
+  resetForm();
+  renderAll();
+}
+window.submitForm = submitForm;
+
+function startEdit(id){
+  var item = items.find(function(i){ return i.id === id; });
+  if(!item) return;
+  editingId = id;
+  setFormValues(item);
+  document.getElementById('form-title').textContent = 'Edit item';
+  document.getElementById('form-submit').textContent = 'Save changes';
+  document.getElementById('form-cancel').hidden = false;
+  document.getElementById('form-panel').scrollIntoView({ behavior:'smooth', block:'start' });
+}
+window.startEdit = startEdit;
+
+/* ── VISIBILITY ── */
+function toggleVisible(id){
+  var item = items.find(function(i){ return i.id === id; });
+  if(!item) return;
+  item.visible = !item.visible;
+  saveItems();
+  renderAll();
+  showToast(item.visible ? 'Item shown on portfolio' : 'Item hidden from portfolio', 'success');
+}
+window.toggleVisible = toggleVisible;
+
+/* ── DELETE ── */
+function confirmDelete(id){
+  var it = items.find(function(i){ return i.id === id; });
+  var title = it ? it.title : '';
+  deleteTargetId = id;
+  document.getElementById('modal-body').textContent = '"' + title + '" will be permanently removed.';
+  document.getElementById('modal-confirm').onclick = function(){ doDelete(); };
+  document.getElementById('modal-backdrop').classList.add('open');
+}
+window.confirmDelete = confirmDelete;
+
+function doDelete(){
+  items = items.filter(function(i){ return i.id !== deleteTargetId; });
+  saveItems();
+  renderAll();
+  closeModal();
+  if(editingId === deleteTargetId){ resetForm(); }
+  showToast('Item removed', 'success');
+  deleteTargetId = null;
+}
+
+function closeModal(){
+  document.getElementById('modal-backdrop').classList.remove('open');
+}
+window.closeModal = closeModal;
+
+/* ── EXPORT COPY ── */
+function copyExport(){
+  var code = document.getElementById('export-code').textContent;
+  navigator.clipboard.writeText(code).then(function(){
+    showToast('Export code copied ✓', 'success');
+  }).catch(function(){
+    showToast('Select and copy the code manually', 'error');
+  });
+}
+window.copyExport = copyExport;
+
+/* ── TOAST ── */
+var toastTimer;
+function showToast(msg, type){
+  var t = document.getElementById('toast');
+  t.textContent = msg;
+  t.className = 'show ' + (type || '');
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(function(){
+    t.className = '';
+  }, 2800);
+}
+
+/* ── HELPERS ── */
+function escHtml(str){
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;').replace(/'/g,'&#39;');
+}
+/* Only allow absolute https:// URLs (blocks javascript:, data: and http:). */
+function safeUrl(str){
+  if(!str) return '';
+  try { var u = new URL(String(str).trim()); return u.protocol === 'https:' ? u.href : ''; }
+  catch(e){ return ''; }
+}
+
+/* ── KEYBOARD ── */
+document.addEventListener('keydown', function(e){
+  if(e.key === 'Escape'){
+    closeModal();
+    if(editingId) resetForm();
+  }
+});
+document.getElementById('modal-backdrop').addEventListener('click', function(e){
+  if(e.target === this) closeModal();
+});
+
+/* ── WIRING (no inline handlers) ── */
+document.getElementById('port-list').addEventListener('click', function(e){
+  var b = e.target.closest('[data-action]'); if(!b) return;
+  var id = b.getAttribute('data-id'), a = b.getAttribute('data-action');
+  if(a === 'toggle') toggleVisible(id);
+  else if(a === 'edit') startEdit(id);
+  else if(a === 'delete') confirmDelete(id);
+});
+document.getElementById('port-list').addEventListener('error', function(e){
+  if(e.target.classList && e.target.classList.contains('port-thumb')){
+    var ph = document.createElement('div'); ph.className = 'port-thumb-placeholder'; ph.textContent = 'No image';
+    e.target.replaceWith(ph);
+  }
+}, true);
+document.getElementById('modal-cancel').addEventListener('click', closeModal);
+document.getElementById('copy-export').addEventListener('click', copyExport);
+document.getElementById('form-submit').addEventListener('click', submitForm);
+document.getElementById('form-cancel').addEventListener('click', resetForm);
+document.getElementById('f-img').addEventListener('input', function(){ previewImg(safeUrl(this.value)); });
+var vis = document.getElementById('f-visible');
+function flipVis(){ vis.classList.toggle('on'); vis.setAttribute('aria-checked', vis.classList.contains('on') ? 'true' : 'false'); }
+vis.addEventListener('click', flipVis);
+vis.addEventListener('keydown', function(e){ if(e.key === ' ' || e.key === 'Enter'){ e.preventDefault(); flipVis(); } });
+
+/* ── START ── */
+loadItems();
+renderAll();
+
+}());
+</script>
+</body>
+</html>
