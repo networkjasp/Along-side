@@ -116,3 +116,15 @@ Structure and section order are unchanged. Applied:
   replace that.
 - The mock-up pages in the PDF exported as blank pages, so the layout follows the written
   recommendations.
+
+## 8. "Connected paths" headings (from reference image)
+
+- Main headings are now heavy, tight-set Poppins SemiBold in charcoal, with no italics or highlight bar.
+  Line breaks are balanced to match the reference ("Communication / that works in / the real world.").
+- A three-line path graphic (mint teal, light green and sage, rounded corner) runs from behind the
+  header across the top of every page opening. On Home ("Communication that works…") and About
+  ("Founder-led…"), a second path runs in along the top and turns down between heading and text.
+- The opening's right column now leads with "Strategic thinking. Practical delivery." as a teal
+  sub-heading, followed by the copy and underlined links, as in the reference.
+- The lines are pure CSS borders, with no images and no effect on load time, and are hidden from screen
+  readers. On phones the connector is dropped and the opening lines are scaled down.

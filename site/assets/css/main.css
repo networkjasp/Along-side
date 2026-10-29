@@ -389,3 +389,64 @@ html.js .ru.in{transform:none;}
   html.js .ru{transform:none;}
 }
 .clients-bar + .cta-band{margin-top:var(--pad-y);}
+
+/* ==========================================================================
+   CONNECTED PATHS — bold headings + CI line graphic
+   Three parallel strokes (mint teal, light green, sage) that run in from the
+   edge and turn a rounded corner: across the top of each page opening, and
+   down between heading and text in key two-column sections.
+   ========================================================================== */
+:root{--path-gap:9px;--path-w:3px;--path-r:58px;--nav-h:122px;}
+
+/* Headings: heavy, tight, charcoal — no italic, no highlight bar */
+h1 em,h2 em{color:inherit;background:none;padding:0;}
+.hero-h1,.page-title,.contact-h1,.simple h1{font-weight:600;letter-spacing:-.035em;line-height:1.02;color:var(--charcoal);}
+.hero-h1{font-size:clamp(2.9rem,6.2vw,5.4rem);margin-bottom:2.25rem;}
+.page-title,.contact-h1{font-size:clamp(2.6rem,5.4vw,4.6rem);}
+.ap-h,.h2-display,.ai-sticky-h,.founder-name,.case-h{font-weight:600;letter-spacing:-.028em;line-height:1.08;}
+.ap-h,.h2-display,.ai-sticky-h{font-size:clamp(2rem,3.7vw,3.1rem);}
+
+/* Opening right column: tagline sub-heading + underlined links */
+.hero-tagline{font-size:clamp(1.55rem,2.5vw,2.15rem);font-weight:500;line-height:1.2;letter-spacing:-.015em;color:var(--teal);margin-bottom:1.1rem;}
+.hero-sub{font-size:1.05rem;color:var(--charcoal);}
+.hero-links{flex-direction:row;flex-wrap:wrap;gap:.6rem 1.75rem;border-top:0;padding-top:.4rem;}
+.hero-links a{font-size:.98rem;padding:0 0 .25rem;border-bottom:2px solid var(--sage);}
+.hero-links a:hover{border-bottom-color:var(--teal);}
+
+/* The line graphic */
+.paths{position:absolute;pointer-events:none;z-index:0;}
+.paths span{position:absolute;border:0 solid;}
+.hero,.page-hero,.contact-hero,.has-connector{position:relative;overflow:hidden;}
+.hero > :not(.paths),.page-hero > :not(.paths),.contact-hero > :not(.paths),.has-connector > :not(.paths){position:relative;z-index:1;}
+
+/* Openings: lines drop from behind the header, turn, and run off to the right */
+.paths-hero{top:0;right:0;left:44%;height:calc(var(--nav-h) + 62px);}
+.paths-hero span{top:0;right:0;border-left-width:var(--path-w);border-bottom-width:var(--path-w);}
+.paths-hero span:nth-child(1){left:0;bottom:0;border-color:var(--mint);border-bottom-left-radius:var(--path-r);}
+.paths-hero span:nth-child(2){left:var(--path-gap);bottom:var(--path-gap);border-color:var(--green);border-bottom-left-radius:calc(var(--path-r) - var(--path-gap));}
+.paths-hero span:nth-child(3){left:calc(var(--path-gap) * 2);bottom:calc(var(--path-gap) * 2);border-color:var(--sage);border-bottom-left-radius:calc(var(--path-r) - var(--path-gap) * 2);}
+.hero{align-items:center;padding-top:calc(var(--nav-h) + 112px);}
+.page-hero.split,.page-hero.statement,.contact-hero{padding-top:calc(var(--nav-h) + 104px);}
+
+/* Section connector: runs in along the top, turns down between the columns */
+.paths-connector{top:1.75rem;right:0;bottom:2.5rem;left:calc(var(--pad-x) + (100% - 2 * var(--pad-x) - clamp(2rem,6vw,6rem)) / 2 + clamp(2rem,6vw,6rem) / 2 - 14px);}
+.about-intro .paths-connector{left:calc(var(--pad-x) + (100% - 2 * var(--pad-x) - clamp(2rem,6vw,6rem)) * 5 / 12 + clamp(2rem,6vw,6rem) / 2 - 14px);}
+.paths-connector span{right:0;bottom:0;border-top-width:var(--path-w);border-left-width:var(--path-w);}
+.paths-connector span:nth-child(1){top:0;left:0;border-color:var(--sage);border-top-left-radius:var(--path-r);}
+.paths-connector span:nth-child(2){top:var(--path-gap);left:var(--path-gap);border-color:var(--green);border-top-left-radius:calc(var(--path-r) - var(--path-gap));}
+.paths-connector span:nth-child(3){top:calc(var(--path-gap) * 2);left:calc(var(--path-gap) * 2);border-color:var(--mint);border-top-left-radius:calc(var(--path-r) - var(--path-gap) * 2);}
+.has-connector .ap-body,.has-connector .ai-right{padding-left:1.25rem;}
+.has-connector .about-preview{padding-top:1.5rem;}
+.has-connector.about-intro{padding-top:calc(var(--pad-y) + 1rem);}
+
+@media(max-width:900px){
+  :root{--nav-h:76px;--path-r:40px;--path-gap:7px;}
+  .paths-hero{left:38%;height:calc(var(--nav-h) + 34px);}
+  .hero,.page-hero.split,.page-hero.statement,.contact-hero{padding-top:calc(var(--nav-h) + 64px);}
+  .paths-connector{display:none;}
+  .has-connector .ap-body,.has-connector .ai-right{padding-left:0;}
+  .hero-h1{font-size:clamp(2.5rem,10vw,3.4rem);}
+}
+@media(max-width:600px){
+  .hero-h1,.page-title,.contact-h1{font-size:2.4rem;}
+}
