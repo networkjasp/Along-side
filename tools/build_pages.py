@@ -18,7 +18,7 @@ PAGES = Path(__file__).resolve().parent / "pages"
 DOMAIN = "https://alongside.co.za"
 BRAND = "Alongside | Strategy & Comms"
 YEAR = "2026"
-OG_IMAGE = "https://static.wixstatic.com/media/5005cc_c9d502dfc48d40beb0ac2bbfc361a502~mv2.jpg"
+OG_IMAGE = DOMAIN + "/assets/img/og-image.png"  # official logo on a 1200x630 card
 
 NAV = [("index.html", "Home"), ("about.html", "About"), ("services.html", "Services"), ("portfolio.html", "Portfolio")]
 
@@ -66,6 +66,8 @@ def head(fname, title, desc, indexable):
             "@type": "ProfessionalService",
             "name": "Alongside | Strategy & Comms",
             "url": DOMAIN + "/",
+            "logo": DOMAIN + "/assets/img/logo.svg",
+            "image": OG_IMAGE,
             "email": "stephne@alongside.co.za",
             "telephone": "+27845879933",
             "slogan": "Strategic thinking. Practical delivery.",
@@ -80,21 +82,24 @@ def head(fname, title, desc, indexable):
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
 <title>{t}</title>
 <meta name="description" content="{d}"/>{robots}{canonical}
-<meta name="theme-color" content="#F5F0E8"/>
+<meta name="theme-color" content="#FFFFFF"/>
 <meta property="og:type" content="website"/>
 <meta property="og:site_name" content="{html.escape(BRAND)}"/>
 <meta property="og:title" content="{t}"/>
 <meta property="og:description" content="{d}"/>
 <meta property="og:url" content="{url}"/>
 <meta property="og:image" content="{OG_IMAGE}"/>
+<meta property="og:image:width" content="1200"/>
+<meta property="og:image:height" content="630"/>
+<meta property="og:image:alt" content="Alongside — strategy &amp; comms, working with you"/>
 <meta name="twitter:card" content="summary_large_image"/>
 <link rel="icon" href="assets/img/favicon.svg" type="image/svg+xml"/>
-<link rel="preload" href="assets/fonts/cormorant-garamond-latin-300-normal.woff2" as="font" type="font/woff2" crossorigin/>
-<link rel="preload" href="assets/fonts/outfit-latin-300-normal.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="icon" href="assets/img/favicon-32.png" type="image/png" sizes="32x32"/>
+<link rel="apple-touch-icon" href="assets/img/apple-touch-icon.png"/>
+<link rel="preload" href="assets/fonts/poppins-latin-400-normal.woff2" as="font" type="font/woff2" crossorigin/>
+<link rel="preload" href="assets/fonts/poppins-latin-600-normal.woff2" as="font" type="font/woff2" crossorigin/>
 <link rel="stylesheet" href="assets/css/main.css"/>
 <script src="assets/js/init.js"></script>
-<script src="assets/js/vendor/gsap.min.js" defer></script>
-<script src="assets/js/vendor/ScrollTrigger.min.js" defer></script>
 <script src="assets/js/main.js" defer></script>{ld}
 </head>"""
 
@@ -105,14 +110,11 @@ def nav(fname):
     links = "\n    ".join(f'<a href="{f}" class="n-link"{cur(f)}>{n}</a>' for f, n in NAV)
     mob = "\n  ".join(f'<a href="{f}" class="mm"{cur(f)}>{n}</a>' for f, n in NAV + [("contact.html", "Contact")])
     return f"""<a href="#main" class="skip">Skip to main content</a>
-<div id="grain" aria-hidden="true"></div>
-<div id="cur" aria-hidden="true"></div>
-<div id="cur-r" aria-hidden="true"></div>
 <div id="prog" aria-hidden="true"></div>
 
 <header>
 <nav id="nav" class="site-nav" aria-label="Main">
-  <a href="index.html" class="n-logo" aria-label="Alongside — home">Alongside</a>
+  <a href="index.html" class="n-logo"><picture><source media="(max-width: 900px)" srcset="assets/img/logo-wordmark.svg"/><img src="assets/img/logo.svg" alt="Alongside — strategy &amp; comms, working with you. Home" width="299" height="90"/></picture></a>
   <div class="n-links">
     {links}
     <a href="contact.html" class="n-cta"{cur("contact.html")}>Contact us</a>
@@ -130,7 +132,7 @@ def footer():
     svcs = "".join(f'<li><a href="services.html#{a}">{n}</a></li>' for a, n in SERVICES_FOOTER)
     return f"""<footer class="site-footer">
   <div class="ft-grid">
-    <div><p class="ft-logo">Alongside</p><p class="ft-tag">Strategy &amp; Comms</p></div>
+    <div><a href="index.html" class="ft-logo"><img src="assets/img/logo.svg" alt="Alongside — strategy &amp; comms, working with you" width="300" height="90" loading="lazy"/></a></div>
     <div class="ft-col"><h2>Navigate</h2><ul>{navl}</ul></div>
     <div class="ft-col"><h2>Services</h2><ul>{svcs}</ul></div>
     <div class="ft-col"><h2>Get in touch</h2><ul>
@@ -166,7 +168,7 @@ def build():
         if fname == "404.html":
             # The 404 page can be served at any depth (e.g. /a/b/c), so it
             # needs root-relative URLs for assets and links.
-            out = out.replace('href="assets/', 'href="/assets/').replace('src="assets/', 'src="/assets/')
+            out = out.replace('href="assets/', 'href="/assets/').replace('src="assets/', 'src="/assets/').replace('srcset="assets/', 'srcset="/assets/')
             for f, _ in NAV + [("contact.html", ""), ("privacy.html", "")]:
                 out = out.replace(f'href="{f}', f'href="/{f}')
         (SITE / fname).write_text(out, encoding="utf-8")

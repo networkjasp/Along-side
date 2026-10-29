@@ -1,53 +1,23 @@
 /* ==========================================================================
    Alongside | Strategy & Comms — site behaviour
-   - No inline event handlers (onclick=…) so a strict CSP can be enforced.
-   - Works without GSAP: every animation degrades to a no-op and content is
-     always made visible.
+   - No inline event handlers, so a strict CSP can be enforced.
+   - No animation library: essential text is visible immediately and motion is
+     a light enhancement only (per the design review).
    ========================================================================== */
 (function () {
   'use strict';
 
   var doc = document;
   var root = doc.documentElement;
-  var hasGsap = typeof window.gsap !== 'undefined';
-  var hasST = hasGsap && typeof window.ScrollTrigger !== 'undefined';
   var reduceMotion = window.matchMedia('(prefers-reduced-motion: reduce)').matches;
-  var finePointer = window.matchMedia('(hover: hover) and (pointer: fine)').matches;
-
-  if (hasST) { window.gsap.registerPlugin(window.ScrollTrigger); }
 
   function $(sel, ctx) { return (ctx || doc).querySelector(sel); }
   function $$(sel, ctx) { return Array.prototype.slice.call((ctx || doc).querySelectorAll(sel)); }
 
-  /* ---------- Custom cursor (desktop, motion allowed, GSAP present) ---------- */
-  var ce = $('#cur'), cr = $('#cur-r');
-  if (ce && cr && hasGsap && finePointer && !reduceMotion) {
-    root.classList.add('has-cursor');
-    var mx = window.innerWidth / 2, my = window.innerHeight / 2, rx = mx, ry = my;
-    doc.addEventListener('mousemove', function (e) {
-      mx = e.clientX; my = e.clientY; window.gsap.set(ce, { x: mx, y: my });
-    }, { passive: true });
-    (function tick() {
-      rx += (mx - rx) * 0.13; ry += (my - ry) * 0.13;
-      window.gsap.set(cr, { x: rx, y: ry });
-      window.requestAnimationFrame(tick);
-    })();
-    doc.addEventListener('mouseover', function (e) {
-      if (e.target.closest && e.target.closest('a,button,label,.pgc,.svc-card,.founder-card,.prin-item,.process-step')) {
-        doc.body.classList.add('ch');
-      }
-    });
-    doc.addEventListener('mouseout', function (e) {
-      if (e.target.closest && e.target.closest('a,button,label,.pgc,.svc-card,.founder-card,.prin-item,.process-step')) {
-        doc.body.classList.remove('ch');
-      }
-    });
-  }
-
-  /* ---------- Nav background + scroll progress (one rAF-throttled handler) ---------- */
+  /* ---------- Header state + scroll progress ---------- */
   var nav = $('#nav'), prog = $('#prog'), ticking = false;
   function onScroll() {
-    if (nav) nav.classList.toggle('scrolled', window.scrollY > 80);
+    if (nav) nav.classList.toggle('scrolled', window.scrollY > 40);
     if (prog) {
       var dh = root.scrollHeight - window.innerHeight;
       prog.style.width = (dh > 0 ? (window.scrollY / dh) * 100 : 0) + '%';
@@ -70,13 +40,7 @@
     mob.classList.toggle('open', open);
     if (open) { mob.removeAttribute('inert'); } else { mob.setAttribute('inert', ''); }
     doc.body.classList.toggle('menu-open', open);
-    if (open) {
-      var first = $('.mm', mob);
-      if (first) first.focus();
-      if (hasGsap && !reduceMotion) {
-        window.gsap.fromTo($$('.mm', mob), { y: 28, opacity: 0 }, { y: 0, opacity: 1, stagger: 0.07, duration: 0.55, ease: 'power3.out' });
-      }
-    }
+    if (open) { var first = $('.mm', mob); if (first) first.focus(); }
   }
   if (ham && mob) {
     mob.setAttribute('inert', '');
@@ -88,88 +52,26 @@
     window.addEventListener('resize', function () { if (menuOpen && window.innerWidth > 900) setMenu(false); });
   }
 
-  /* ---------- Hero entrance ---------- */
-  /* Splits the heading into words using DOM nodes (no innerHTML / inline
-     styles). The accessible name is unchanged because the text is the same. */
-  function splitWords(el) {
-    var parts = [];
-    Array.prototype.slice.call(el.childNodes).forEach(function (node) {
-      if (node.nodeType === 3) {
-        node.textContent.split(/(\s+)/).forEach(function (w) {
-          if (!w) return;
-          if (/^\s+$/.test(w)) { parts.push(doc.createTextNode(' ')); return; }
-          var m = doc.createElement('span'); m.className = 'wmask';
-          var s = doc.createElement('span'); s.className = 'ww'; s.textContent = w;
-          m.appendChild(s); parts.push(m);
-        });
-      } else if (node.nodeName === 'EM') {
-        var m2 = doc.createElement('span'); m2.className = 'wmask';
-        var s2 = doc.createElement('span'); s2.className = 'ww';
-        s2.appendChild(node.cloneNode(true));
-        m2.appendChild(s2); parts.push(m2);
-      } else {
-        parts.push(node.cloneNode(true));
-      }
+  /* ---------- Services strip pause / play ---------- */
+  var mq = $('#mqw'), mqBtn = $('#mq-toggle');
+  if (mq && mqBtn) {
+    mqBtn.addEventListener('click', function () {
+      var paused = mq.classList.toggle('paused');
+      mqBtn.setAttribute('aria-pressed', paused ? 'true' : 'false');
+      mqBtn.firstChild.textContent = paused ? 'Play' : 'Pause';
     });
-    el.textContent = '';
-    parts.forEach(function (p) { el.appendChild(p); });
   }
 
-  var heroTitle = $('[data-hero-title]');
-  if (hasGsap && !reduceMotion) {
-    window.gsap.fromTo('#nav', { y: -12, opacity: 0 }, { y: 0, opacity: 1, duration: 0.75, ease: 'power3.out', delay: 0.15 });
-    var rule = $('[data-hero-rule]');
-    if (rule) window.gsap.fromTo(rule, { width: 0 }, { width: '2.8rem', duration: 0.65, ease: 'power3.out', delay: 0.3 });
-    if (heroTitle) {
-      splitWords(heroTitle);
-      var tl = window.gsap.timeline({ delay: 0.4 });
-      tl.fromTo($$('.ww', heroTitle), { y: '115%' }, { y: '0%', stagger: 0.05, duration: 0.85, ease: 'power3.out' });
-      $$('[data-hero-fade]').forEach(function (el) {
-        tl.fromTo(el, { y: 20, opacity: 0 }, { y: 0, opacity: 1, duration: 0.75, ease: 'power3.out' }, '-=.5');
-      });
-    }
-  }
-
-  /* ---------- Scroll reveals ---------- */
+  /* ---------- Gentle lift on scroll (text is never hidden) ---------- */
   var reveals = $$('.ru');
   function showAll() { reveals.forEach(function (el) { el.classList.add('in'); }); }
-  if (reduceMotion) {
+  if (reduceMotion || !('IntersectionObserver' in window)) {
     showAll();
-  } else if (hasST) {
-    reveals.forEach(function (el) {
-      window.ScrollTrigger.create({ trigger: el, start: 'top 90%', once: true, onEnter: function () { el.classList.add('in'); } });
-    });
-  } else if ('IntersectionObserver' in window) {
+  } else {
     var io = new IntersectionObserver(function (entries) {
       entries.forEach(function (en) { if (en.isIntersecting) { en.target.classList.add('in'); io.unobserve(en.target); } });
-    }, { rootMargin: '0px 0px -10% 0px' });
+    }, { rootMargin: '0px 0px -8% 0px' });
     reveals.forEach(function (el) { io.observe(el); });
-  } else {
-    showAll();
-  }
-  /* Safety net: never leave content hidden. */
-  window.setTimeout(function () {
-    reveals.forEach(function (el) {
-      if (el.getBoundingClientRect().top < window.innerHeight) el.classList.add('in');
-    });
-  }, 2500);
-
-  /* ---------- Counters ---------- */
-  /* Numbers are written in the HTML as their final value, so they never show
-     "0" if JS or GSAP fails (the original started every counter at 0). */
-  if (hasST && !reduceMotion) {
-    $$('[data-count]').forEach(function (el) {
-      var target = parseInt(el.getAttribute('data-count'), 10);
-      var suffix = el.getAttribute('data-suffix') || '';
-      if (isNaN(target)) return;
-      window.ScrollTrigger.create({
-        trigger: el, start: 'top 90%', once: true,
-        onEnter: function () {
-          var o = { v: 0 };
-          window.gsap.to(o, { v: target, duration: 1.6, ease: 'power2.out', onUpdate: function () { el.textContent = Math.round(o.v) + suffix; } });
-        }
-      });
-    });
   }
 
   /* ---------- Portfolio filter ---------- */
@@ -191,7 +93,6 @@
       });
       if (empty) empty.hidden = shown !== 0;
       if (live) live.textContent = 'Showing ' + shown + ' project' + (shown === 1 ? '' : 's') + '.';
-      if (hasST) window.ScrollTrigger.refresh();
     });
   }
 

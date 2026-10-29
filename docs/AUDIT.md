@@ -65,3 +65,54 @@ changes from *Alongside Website Copy* applied. Severity: **Critical**, **High**,
 4. **Privacy Notice** — a POPIA-aligned draft is included; have it reviewed (this is not legal advice).
 5. **Images** are still hot-linked from `static.wixstatic.com`. If the old Wix site is ever closed they will disappear — download approved images into `site/assets/img/`.
 6. Domain: canonical URLs use `https://alongside.co.za`. Change `DOMAIN` in `tools/build_pages.py` (and `robots.txt` / `sitemap.xml`) if the live domain differs.
+
+## 6. Brand logo (added)
+
+- The site previously used the word "Alongside" in a web font instead of the logo.
+- The supplied logo (JPG) was converted to clean, transparent vector files in its exact colours
+  (grey `#757575`, green "g" `#B7E0A8`, tagline green `#95B789`):
+  - `site/assets/img/logo.svg`: full logo with "strategy & comms / working with you" (footer).
+  - `site/assets/img/logo-wordmark.svg`: same artwork without the taglines, used in the
+    navigation bar where the taglines would be too small to read.
+  - `favicon.svg`, `favicon-32.png`, `apple-touch-icon.png`: the green "g" on a grey tile.
+  - `og-image.png`: 1200×630 social-sharing card. Link previews on WhatsApp, LinkedIn and
+    Facebook now show the logo instead of a portfolio photo hosted on Wix.
+- If the designer has original vector files (AI/EPS/SVG), drop them in with the same file names
+  for a perfect master copy.
+
+## 7. Design refresh (from *Design Suggestions*)
+
+Structure and section order are unchanged. Applied:
+
+- **Logo:** full logo in the header at a size where "strategy & comms / working with you" stays
+  readable (shrinks on scroll; wordmark on phones), full logo in the footer, deep-teal favicon.
+- **Typography:** Poppins throughout: SemiBold headings, Medium navigation, Regular body at 16–17px.
+  The serif and italic headings are gone; emphasis now uses deep teal plus a light-green highlight.
+- **Colour:** white backgrounds alternating with `#F0F4F7`; charcoal `#3A4740` text; `#757575` for
+  secondary text on white only (it fails contrast on the neutral, where `#5F6B64` is used);
+  sage / light green / mint teal used only for graphics, number badges and panel borders.
+- **Buttons:** one shape (8px radius, 48px high): deep teal with white text; outlined secondary.
+- **Removed:** cream background, film-grain overlay, custom cursor circle, central hero divider line,
+  "scroll to explore" line, decorative glows.
+- **Home:** shorter opening with both columns aligned at the top; the next section shows on a laptop
+  screen. Slower services strip with a Pause button. Services use number badges and thin dividers.
+  Work thumbnails use consistent frames showing the full artwork, with captions beneath. Stats on the
+  light neutral. Closing CTA is a compact deep-teal panel with a contrasting button.
+- **About:** shorter opening, equal principle cards, founder panel (logo mark until a portrait is
+  supplied), award as a small supporting panel.
+- **Services:** rows standardised to number | title | description | button, with tighter spacing.
+- **Portfolio:** uniform frames and caption positions; images now request the *uncropped* artwork
+  from Wix (`/v1/fit/`) so wording and logos are not cut off.
+- **Contact:** details beside the form with top edges aligned; bordered white fields with visible
+  labels; matching line icons replace the mixed symbols.
+- **Animation:** all text is visible immediately. Motion is a small lift only, and none with
+  reduced-motion settings. The GSAP library is no longer needed and was removed (faster pages).
+
+**Still needs material from you:**
+- A professional portrait of Stephné for the About page.
+- The approved client logos. The strip currently shows names.
+- The CI line patterns. They weren't in the files I received, so the closing panel uses a faint
+  logo "g" as a placeholder brand graphic. Send the pattern artwork (SVG preferred) and it can
+  replace that.
+- The mock-up pages in the PDF exported as blank pages, so the layout follows the written
+  recommendations.

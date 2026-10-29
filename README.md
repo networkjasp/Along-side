@@ -11,8 +11,8 @@ site/                 ← the website (this is the ONLY folder Netlify publishes
   assets/css/main.css         all styles
   assets/js/main.js           all behaviour (menu, animations, filter, contact form)
   assets/js/init.js           tiny head script (no-JS fallback flag)
-  assets/js/vendor/           GSAP 3.12.5, self-hosted
-  assets/fonts/               Cormorant Garamond + Outfit, self-hosted (OFL)
+  assets/fonts/               Poppins (CI typeface), self-hosted (OFL)
+  assets/img/                 logo (SVG), favicons, social-sharing image
 tools/                ← never deployed
   pages/*.html                page content (edit these)
   build_pages.py              adds the shared head/nav/footer → writes site/*.html
@@ -35,6 +35,20 @@ netlify.toml          ← publish folder, security headers, redirects
    Add a notification under *Forms → Form notifications → Email* so enquiries reach
    stephne@alongside.co.za.
 4. Test: submit the contact form on the live site and confirm the email arrives.
+
+## Design system (Alongside CI)
+
+| Use | Colour |
+|---|---|
+| Main background | White `#FFFFFF` |
+| Alternate sections, footer | Light neutral `#F0F4F7` |
+| Headings and body text | Charcoal `#3A4740` |
+| Secondary info (on white only) | Grey `#757575` |
+| Buttons, links, closing panel | Deep teal `#0A3937` |
+| Accents: panels, numbering, graphics (never small text) | Sage `#99BC8C`, light green `#B7DFA8`, mint teal `#9DD1D1` |
+
+Typography: Poppins SemiBold (headings), Medium (navigation, labels), Regular (body, 16–17px).
+All tokens are at the top of `site/assets/css/main.css`.
 
 ## Editing content
 
