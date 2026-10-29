@@ -1,0 +1,156 @@
+<!DOCTYPE html>
+<html lang="en-ZA">
+<head>
+<meta charset="UTF-8"/>
+<meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta name="robots" content="noindex,nofollow"/>
+<meta http-equiv="Content-Security-Policy" content="default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: blob: https://static.wixstatic.com; font-src 'self'; connect-src 'self'; form-action 'self'; base-uri 'self'; object-src 'none'"/>
+<title>Website Manager — Alongside</title>
+<link rel="icon" href="../assets/img/favicon.svg" type="image/svg+xml"/>
+<link rel="stylesheet" href="admin.css"/>
+<script src="admin.js" defer></script>
+</head>
+<body>
+<header class="bar">
+  <a class="bar-logo" href="../index.html"><img src="../assets/img/logo-wordmark.svg" alt="Alongside — view website" width="140" height="42"/></a>
+  <p class="bar-title">Website Manager</p>
+  <div class="bar-user" id="bar-user" hidden>
+    <span id="user-email"></span>
+    <a href="../index.html" target="_blank" rel="noopener">View site</a>
+    <button type="button" class="link-btn" id="logout">Sign out</button>
+  </div>
+</header>
+
+<main id="main">
+  <p class="loading" id="loading">Loading…</p>
+
+  <!-- ============ SIGN IN ============ -->
+  <section class="auth" id="auth" hidden aria-labelledby="auth-h">
+    <form class="card" id="login-form" novalidate>
+      <h1 id="auth-h">Sign in</h1>
+      <p class="muted">Manage portfolio projects and the founder photo.</p>
+      <label for="login-email">Email</label>
+      <input id="login-email" name="email" type="email" autocomplete="username" required/>
+      <label for="login-password">Password</label>
+      <input id="login-password" name="password" type="password" autocomplete="current-password" required/>
+      <button type="submit" class="btn">Sign in</button>
+      <button type="button" class="link-btn" id="show-forgot">Forgot your password?</button>
+    </form>
+
+    <form class="card" id="forgot-form" hidden novalidate>
+      <h1>Reset password</h1>
+      <p class="muted">Enter your email and we'll send you a link to choose a new password.</p>
+      <label for="forgot-email">Email</label>
+      <input id="forgot-email" name="email" type="email" autocomplete="username" required/>
+      <button type="submit" class="btn">Send reset link</button>
+      <button type="button" class="link-btn" id="back-login">Back to sign in</button>
+    </form>
+
+    <form class="card" id="password-form" hidden novalidate>
+      <h1 id="password-h">Choose a password</h1>
+      <p class="muted" id="password-intro">Use at least 10 characters.</p>
+      <label for="new-password">New password</label>
+      <input id="new-password" name="password" type="password" autocomplete="new-password" minlength="10" required/>
+      <label for="new-password2">Repeat password</label>
+      <input id="new-password2" name="password2" type="password" autocomplete="new-password" minlength="10" required/>
+      <button type="submit" class="btn">Save password</button>
+    </form>
+  </section>
+
+  <!-- ============ MANAGER ============ -->
+  <section id="app" hidden>
+    <nav class="tabs" role="tablist" aria-label="Sections">
+      <button type="button" role="tab" id="tab-portfolio" aria-controls="panel-portfolio" aria-selected="true">Portfolio</button>
+      <button type="button" role="tab" id="tab-founder" aria-controls="panel-founder" aria-selected="false" tabindex="-1">Founder photo</button>
+    </nav>
+
+    <section class="panel" id="panel-portfolio" role="tabpanel" aria-labelledby="tab-portfolio">
+      <div class="panel-head">
+        <div>
+          <h1>Portfolio projects</h1>
+          <p class="muted">Shown on the Portfolio page in this order. Tick “Home page” on up to four to show them on the Home page.</p>
+        </div>
+        <button type="button" class="btn" id="add-project">+ Add project</button>
+      </div>
+      <ol class="projects" id="projects"></ol>
+      <p class="empty" id="projects-empty" hidden>No projects yet. Click “Add project” to upload your first one.</p>
+    </section>
+
+    <section class="panel" id="panel-founder" role="tabpanel" aria-labelledby="tab-founder" hidden>
+      <div class="panel-head">
+        <div>
+          <h1>Founder photo</h1>
+          <p class="muted">Shown on the About page. Use an upright (portrait) photo, at least 800 × 1000 pixels.</p>
+        </div>
+      </div>
+      <form class="founder" id="founder-form" novalidate>
+        <figure class="founder-preview">
+          <img id="founder-img" src="data:," alt="" hidden/>
+          <img id="founder-placeholder" src="../assets/img/logo-mark.svg" alt="" class="placeholder"/>
+          <figcaption id="founder-caption" class="muted">No photo yet. The logo mark is shown instead.</figcaption>
+        </figure>
+        <div class="founder-fields">
+          <label for="founder-file">Upload a new photo</label>
+          <input id="founder-file" type="file" accept="image/jpeg,image/png,image/webp"/>
+          <label for="founder-name">Name (caption under the photo)</label>
+          <input id="founder-name" type="text" maxlength="120" required/>
+          <label for="founder-alt">Photo description</label>
+          <input id="founder-alt" type="text" maxlength="250"/>
+          <div class="row">
+            <button type="submit" class="btn">Save</button>
+            <button type="button" class="btn-outline" id="founder-remove">Remove photo</button>
+          </div>
+        </div>
+      </form>
+    </section>
+  </section>
+</main>
+
+<!-- Add / edit project -->
+<dialog id="project-dialog" aria-labelledby="dlg-h">
+  <form id="project-form" method="dialog" novalidate>
+    <h2 id="dlg-h">Add project</h2>
+    <label for="p-title">Project title <span aria-hidden="true">*</span></label>
+    <input id="p-title" type="text" maxlength="140" required placeholder="e.g. Duvenhage Wines | Social content"/>
+    <label for="p-category">Category (portfolio filter)</label>
+    <select id="p-category">
+      <option value="campaigns">Campaigns</option>
+      <option value="branding">Branding</option>
+      <option value="communications">Communications</option>
+      <option value="digital">Digital</option>
+    </select>
+    <label for="p-file">Image <span aria-hidden="true">*</span></label>
+    <div class="img-pick">
+      <img id="p-preview" src="data:," alt="" hidden/>
+      <input id="p-file" type="file" accept="image/jpeg,image/png,image/webp"/>
+    </div>
+    <p class="hint">JPG, PNG or WebP. Large photos are resized automatically. The whole image is shown, not cropped.</p>
+    <label for="p-alt">Image description (for screen readers and Google)</label>
+    <input id="p-alt" type="text" maxlength="250" placeholder="e.g. Instagram posts for Duvenhage Wines"/>
+    <label for="p-link">Link to the live project (optional)</label>
+    <input id="p-link" type="url" maxlength="500" placeholder="https://"/>
+    <label class="check"><input id="p-home" type="checkbox"/> Show on the Home page</label>
+    <label class="check"><input id="p-hidden" type="checkbox"/> Hide from the website (keep as draft)</label>
+    <p class="form-error" id="p-error" role="alert"></p>
+    <div class="row">
+      <button type="submit" class="btn" id="p-save" value="save">Save project</button>
+      <button type="button" class="btn-outline" id="p-cancel">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<!-- Confirm remove -->
+<dialog id="confirm-dialog" aria-labelledby="confirm-h">
+  <form method="dialog">
+    <h2 id="confirm-h">Remove project?</h2>
+    <p id="confirm-text"></p>
+    <div class="row">
+      <button type="submit" class="btn-danger" value="yes">Remove</button>
+      <button type="submit" class="btn-outline" value="no">Cancel</button>
+    </div>
+  </form>
+</dialog>
+
+<div class="toast" id="toast" role="status" aria-live="polite"></div>
+</body>
+</html>

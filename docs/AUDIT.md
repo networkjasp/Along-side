@@ -128,3 +128,45 @@ Structure and section order are unchanged. Applied:
   sub-heading, followed by the copy and underlined links, as in the reference.
 - The lines are pure CSS borders, with no images and no effect on load time, and are hidden from screen
   readers. On phones the connector is dropped and the opening lines are scaled down.
+
+## 9. Website Manager (portfolio + founder photo)
+
+- Added a sign-in portal at `/admin/` (Decap CMS 3.17.3, self-hosted, no CDN). Sign-in uses GitHub
+  via Netlify's OAuth service, and only accounts with write access to the repo can save. This replaces the
+  earlier fake client-side password and the local copy-paste tool (`tools/portfolio-manager.html`
+  removed).
+- Portfolio projects and the founder photo now live in `content/portfolio.json` and
+  `content/founder.json`. Netlify runs `python3 tools/build_pages.py` on each deploy to render them.
+  The build accepts only uploaded images (`/assets/uploads/…`) or `https://` URLs and escapes all text,
+  so an entry can't inject code into the site.
+- CSP moved from a response header to a per-page `<meta>` tag so the public pages stay strict while
+  `/admin/` gets the wider policy Decap needs (`unsafe-eval`, GitHub API). `X-Frame-Options: DENY` and
+  the other headers still come from `netlify.toml`.
+- Tested end-to-end in a browser with Decap's local backend: uploading a project image and a founder
+  photo wrote the image to `site/assets/uploads/`, updated the JSON, and the rebuilt pages showed both
+  (test data removed afterwards). GitHub sign-in itself can only be tested once steps 1–4 in the
+  README are done.
+
+## 10. Website Manager rebuilt with a built-in email/password login
+
+At the client's request, the GitHub-based manager (section 9) was replaced with one built into the
+site that needs no GitHub account:
+
+- **Login:** Netlify Identity (invite-only email + password, password-reset emails). The browser
+  library is bundled into `site/admin/admin.js`, with no third-party scripts.
+- **Authorisation:** every API call re-checks the login with Identity **and** requires the `admin`
+  (or `editor`) role. Write requests must come from the site's own origin (CSRF protection).
+- **Storage:** Netlify Blobs, so changes are live instantly with no rebuild.
+- **Upload safety:** the browser resizes images (max 2000px) and strips metadata. The server only
+  accepts real JPG/PNG/WebP (checked by file signature, max 5 MB). Images are served with
+  `nosniff` and a sandbox CSP.
+- **Content safety:** text length limits, enum categories, `https://` links only, images limited to
+  uploaded files or the existing Wix URLs. Public pages render with `textContent`, never HTML.
+- **Admin CSP:** as strict as the public site (`script-src 'self'`, no `unsafe-eval`).
+- **Tests:** 9 API unit tests (`npm test`). A full browser run against a local stand-in for Netlify
+  passed: sign-in, wrong password, add project with a 3200px image (stored at 2000px), https-only
+  link check, reorder, Home-page pick, public pages updated, remove, founder photo set/remove,
+  sign-out, the "no role" block, and the invite → choose password → manager flow.
+- **Library workaround:** `@netlify/identity` 2.0.0's `acceptInvite()` does not set the session cookie,
+  so the manager signs in once right after the password is chosen.
+- Decap CMS, the GitHub OAuth setup and `site/admin/config.yml` were removed.

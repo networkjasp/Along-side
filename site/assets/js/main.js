@@ -77,7 +77,6 @@
   /* ---------- Portfolio filter ---------- */
   var filterBar = $('[data-filter-bar]');
   if (filterBar) {
-    var tiles = $$('[data-cat]');
     var empty = $('#port-empty');
     var live = $('#filter-status');
     filterBar.addEventListener('click', function (e) {
@@ -86,7 +85,7 @@
       var cat = btn.getAttribute('data-filter');
       $$('button[data-filter]', filterBar).forEach(function (b) { b.setAttribute('aria-pressed', b === btn ? 'true' : 'false'); });
       var shown = 0;
-      tiles.forEach(function (t) {
+      $$('#port-grid [data-cat]').forEach(function (t) {
         var show = cat === 'all' || t.getAttribute('data-cat') === cat;
         t.hidden = !show;
         if (show) { shown++; t.classList.add('in'); }
@@ -94,6 +93,88 @@
       if (empty) empty.hidden = shown !== 0;
       if (live) live.textContent = 'Showing ' + shown + ' project' + (shown === 1 ? '' : 's') + '.';
     });
+  }
+
+  /* ---------- Website Manager: invite / password-reset links ---------- */
+  /* Netlify Identity emails link to the site root; send them to the manager. */
+  if (/(invite|recovery|confirmation|email_change)_token=/.test(location.hash) && !/\/admin\/?/.test(location.pathname)) {
+    location.replace('/admin/' + location.hash);
+    return;
+  }
+
+  /* ---------- Live portfolio + founder photo (from the Website Manager) ---------- */
+  /* The HTML already contains a build-time copy, so pages work without this;
+     it just swaps in the latest saved content. Text is set with textContent. */
+  var CATS = { campaigns: 'Campaigns', branding: 'Branding', communications: 'Communications', digital: 'Digital' };
+  var SAFE_IMG = /^(\/media\/[\w.-]+|\/assets\/[\w./-]+|https:\/\/static\.wixstatic\.com\/\S+)$/;
+  function mk(tag, cls, text) { var n = doc.createElement(tag); if (cls) n.className = cls; if (text != null) n.textContent = text; return n; }
+  function frame(item) {
+    var f = mk('div', 'pgc-frame');
+    var img = doc.createElement('img');
+    img.src = item.image; img.alt = item.alt || item.title; img.loading = 'lazy'; img.decoding = 'async';
+    img.width = 900; img.height = 675;
+    f.appendChild(img);
+    return f;
+  }
+  function renderPortfolio(items) {
+    var grid = $('#port-grid');
+    if (grid) {
+      var active = $('[data-filter-bar] button[aria-pressed="true"]');
+      var cat = active ? active.getAttribute('data-filter') : 'all';
+      grid.textContent = '';
+      items.forEach(function (it) {
+        var li = mk('li', 'pgc ru in'); li.setAttribute('data-cat', it.category);
+        li.hidden = !(cat === 'all' || cat === it.category);
+        li.appendChild(frame(it));
+        var cap = mk('div', 'pgc-cap');
+        cap.appendChild(mk('p', 'pgc-tag', CATS[it.category] || ''));
+        var h = mk('h3', 'pgc-title');
+        if (it.link && /^https:\/\//.test(it.link)) {
+          var a = mk('a', null, it.title); a.href = it.link; a.target = '_blank'; a.rel = 'noopener noreferrer';
+          a.appendChild(mk('span', 'visually-hidden', ' (opens in a new tab)'));
+          h.appendChild(a);
+        } else { h.textContent = it.title; }
+        cap.appendChild(h);
+        li.appendChild(cap);
+        grid.appendChild(li);
+      });
+      if (!items.length) grid.appendChild(mk('li', 'port-empty', 'New work is on its way.'));
+    }
+    var home = $('.port-grid-home');
+    if (home) {
+      var picks = items.filter(function (i) { return i.show_on_home; }).slice(0, 4);
+      if (!picks.length) picks = items.slice(0, 4);
+      home.textContent = '';
+      picks.forEach(function (it) {
+        var fig = mk('figure', 'pgc ru in');
+        fig.appendChild(frame(it));
+        fig.appendChild(mk('figcaption', null, it.title));
+        home.appendChild(fig);
+      });
+    }
+  }
+  function renderFounder(f) {
+    var fig = $('.founder-portrait');
+    if (!fig || !f) return;
+    fig.textContent = '';
+    var img = doc.createElement('img');
+    if (f.photo && SAFE_IMG.test(f.photo)) {
+      img.src = f.photo; img.alt = f.alt || f.name; img.width = 800; img.height = 1000;
+    } else {
+      img.src = 'assets/img/logo-mark.svg'; img.alt = ''; img.className = 'founder-portrait-mark'; img.width = 160; img.height = 160;
+    }
+    fig.appendChild(img);
+    fig.appendChild(mk('figcaption', null, f.name || ''));
+  }
+  if (($('#port-grid') || $('.port-grid-home') || $('.founder-portrait')) && window.fetch && location.protocol !== 'file:') {
+    fetch('/api/content', { headers: { Accept: 'application/json' } })
+      .then(function (r) { if (!r.ok) throw new Error(r.status); return r.json(); })
+      .then(function (data) {
+        var items = (data.portfolio || []).filter(function (i) { return i && i.title && SAFE_IMG.test(i.image || '') && CATS[i.category]; });
+        renderPortfolio(items);
+        renderFounder(data.founder);
+      })
+      .catch(function () { /* keep the build-time content */ });
   }
 
   /* ---------- Contact form (Netlify Forms) ---------- */

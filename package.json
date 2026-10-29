@@ -1,0 +1,19 @@
+{
+  "name": "alongside-website",
+  "private": true,
+  "type": "module",
+  "description": "Alongside | Strategy & Comms website and Website Manager",
+  "scripts": {
+    "build": "python3 tools/build_pages.py && npm run build:admin",
+    "build:admin": "esbuild tools/admin/admin.src.js --bundle --minify --format=iife --target=es2019 --outfile=site/admin/admin.js",
+    "test": "node --test tests/*.test.mjs"
+  },
+  "dependencies": {
+    "@netlify/blobs": "^11.1.7",
+    "@netlify/identity": "^2.0.0"
+  },
+  "devDependencies": {
+    "esbuild": "^0.25.0"
+  },
+  "engines": { "node": ">=20" }
+}

@@ -1,8 +1,14 @@
 # Netlify configuration — the repository root is the GitHub repo; only the
-# /site folder is published, so /tools and /docs are never served publicly.
+# /site folder is published, so /tools, /content and /docs are never served.
+# The build renders the pages and bundles the Website Manager (/admin).
 [build]
   publish = "site"
-  command = ""
+  command = "npm run build"
+
+# Website Manager API: Netlify Functions + Netlify Blobs + Netlify Identity
+[functions]
+  directory = "netlify/functions"
+  node_bundler = "esbuild"
 
 # Old internal pages: return 404 instead of serving them.
 # portfolio-manager.html exposed a hard-coded password; audit-report.html
@@ -26,10 +32,11 @@
   force = true
 
 # ---------- Security headers (every response) ----------
+# The Content-Security-Policy is set per page in a <meta> tag (public pages are
+# strict; /admin has its own equally strict policy).
 [[headers]]
   for = "/*"
   [headers.values]
-    Content-Security-Policy = "default-src 'self'; script-src 'self'; style-src 'self'; img-src 'self' data: https://static.wixstatic.com; font-src 'self'; connect-src 'self'; form-action 'self'; frame-ancestors 'none'; base-uri 'self'; object-src 'none'; manifest-src 'self'; upgrade-insecure-requests"
     Strict-Transport-Security = "max-age=31536000; includeSubDomains"
     X-Content-Type-Options = "nosniff"
     X-Frame-Options = "DENY"
@@ -54,3 +61,10 @@
   for = "/assets/js/*.js"
   [headers.values]
     Cache-Control = "public, max-age=86400, must-revalidate"
+
+# ---------- Website manager ----------
+[[headers]]
+  for = "/admin/*"
+  [headers.values]
+    X-Robots-Tag = "noindex, nofollow"
+    Cache-Control = "no-cache"

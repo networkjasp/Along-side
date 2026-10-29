@@ -1,10 +1,14 @@
 #!/usr/bin/env python3
 """
-Regenerates the shared header/nav/footer for every page in ../site.
+Builds every page in ../site from:
+  tools/pages/*.html     page bodies
+  content/portfolio.json starting portfolio items
+  content/founder.json   starting founder details
 
-The live site is plain static HTML (no build step is needed to deploy).
-This script only exists so the navigation, footer and <head> stay identical
-across pages. Edit the page bodies in tools/pages/*.html, then run:
+Live edits made in the Website Manager (/admin) are stored in Netlify Blobs and
+swapped into the pages by assets/js/main.js; the build-time copy is the
+fallback (and what search engines see if the API is unreachable). Netlify runs
+this on every deploy (see netlify.toml). To preview locally:
 
     python3 tools/build_pages.py
 """
@@ -14,6 +18,16 @@ import html, json
 ROOT = Path(__file__).resolve().parent.parent
 SITE = ROOT / "site"
 PAGES = Path(__file__).resolve().parent / "pages"
+CONTENT = ROOT / "content"
+
+# Content-Security-Policy for the public pages (meta tag, so the /admin portal
+# can carry its own policy without the two clashing).
+CSP = ("default-src 'self'; script-src 'self'; style-src 'self'; "
+       "img-src 'self' data: https://static.wixstatic.com; font-src 'self'; "
+       "connect-src 'self'; form-action 'self'; base-uri 'self'; object-src 'none'; "
+       "upgrade-insecure-requests")
+
+CATEGORIES = {"campaigns": "Campaigns", "branding": "Branding", "communications": "Communications", "digital": "Digital"}
 
 DOMAIN = "https://alongside.co.za"
 BRAND = "Alongside | Strategy & Comms"
@@ -80,6 +94,7 @@ def head(fname, title, desc, indexable):
 <head>
 <meta charset="UTF-8"/>
 <meta name="viewport" content="width=device-width,initial-scale=1"/>
+<meta http-equiv="Content-Security-Policy" content="{CSP}"/>
 <title>{t}</title>
 <meta name="description" content="{d}"/>{robots}{canonical}
 <meta name="theme-color" content="#FFFFFF"/>
@@ -150,9 +165,91 @@ def footer():
 </a>"""
 
 
+def esc(s):
+    return html.escape(str(s or ""), quote=True)
+
+
+def img_src(src):
+    """Accept uploads (/assets/uploads/...) and https URLs only."""
+    src = (src or "").strip()
+    if src.startswith("/media/"):
+        return src                      # uploaded through the Website Manager
+    if src.startswith("/assets/"):
+        return src.lstrip("/")          # relative, so pages also open locally
+    if src.startswith("https://"):
+        return src
+    return ""
+
+
+def safe_link(url):
+    url = (url or "").strip()
+    return url if url.startswith("https://") else ""
+
+
+def load(name, default):
+    f = CONTENT / name
+    return json.loads(f.read_text(encoding="utf-8")) if f.exists() else default
+
+
+def portfolio_items():
+    items = []
+    for it in load("portfolio.json", {"items": []}).get("items", []):
+        if it.get("hidden"):
+            continue
+        cat = it.get("category") if it.get("category") in CATEGORIES else "campaigns"
+        src = img_src(it.get("image"))
+        if not src or not it.get("title"):
+            continue
+        items.append(dict(it, category=cat, src=src))
+    return items
+
+
+def render_portfolio_grid(items):
+    out = []
+    for it in items:
+        title = esc(it["title"])
+        link = safe_link(it.get("link"))
+        if link:
+            title = f'<a href="{esc(link)}" target="_blank" rel="noopener noreferrer">{title}<span class="visually-hidden"> (opens in a new tab)</span></a>'
+        out.append(f"""    <li class="pgc ru" data-cat="{it['category']}">
+      <div class="pgc-frame"><img src="{esc(it['src'])}" alt="{esc(it.get('alt') or it['title'])}" loading="lazy" decoding="async" width="900" height="675"/></div>
+      <div class="pgc-cap"><p class="pgc-tag">{CATEGORIES[it['category']]}</p><h3 class="pgc-title">{title}</h3></div>
+    </li>""")
+    return "\n".join(out) or '    <li class="port-empty">New work is on its way.</li>'
+
+
+def render_home_work(items):
+    picks = [i for i in items if i.get("show_on_home")][:4] or items[:4]
+    return "\n".join(
+        f"""    <figure class="pgc ru"><div class="pgc-frame"><img src="{esc(i['src'])}" alt="{esc(i.get('alt') or i['title'])}" loading="lazy" decoding="async" width="900" height="675"/></div><figcaption>{esc(i['title'])}</figcaption></figure>"""
+        for i in picks)
+
+
+def render_founder():
+    f = load("founder.json", {})
+    name = esc(f.get("name") or "Stephné du Toit-Smit")
+    src = img_src(f.get("photo"))
+    if src:
+        inner = f'<img src="{esc(src)}" alt="{esc(f.get("alt") or name)}" width="800" height="1000" loading="lazy" decoding="async"/>'
+    else:  # brand mark until a portrait is uploaded
+        inner = '<img class="founder-portrait-mark" src="assets/img/logo-mark.svg" alt="" width="160" height="160"/>'
+    return f"""<figure class="founder-portrait ru">
+      {inner}
+      <figcaption>{name}</figcaption>
+    </figure>"""
+
+
 def build():
+    items = portfolio_items()
+    blocks = {
+        "<!--@PORTFOLIO_GRID-->": render_portfolio_grid(items),
+        "<!--@HOME_WORK-->": render_home_work(items),
+        "<!--@FOUNDER_PHOTO-->": render_founder(),
+    }
     for fname, cls, title, desc, idx in PAGE_META:
         body = (PAGES / fname).read_text(encoding="utf-8").strip()
+        for k, v in blocks.items():
+            body = body.replace(k, v)
         out = f"""{head(fname, title, desc, idx)}
 <body class="{cls}">
 {nav(fname)}
